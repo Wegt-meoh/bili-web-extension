@@ -1,3 +1,7 @@
+if (typeof browser === 'undefined') {
+    var browser = chrome
+}
+
 async function saveConfig(theme) {
     try {
         await browser.storage.local.set({ theme })
@@ -10,7 +14,8 @@ async function loadConfig() {
     try {
         let { theme } = await browser.storage.local.get('theme')
         if (typeof theme !== 'string') {
-            throw new Error(`get theme failed: `, theme)
+            await saveConfig('light')
+            return 'light'
         }
         return theme
     } catch (error) {
