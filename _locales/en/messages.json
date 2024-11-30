@@ -1,0 +1,10 @@
+{
+    "extension_name": {
+        "message": "bilibili-helper Extension",
+        "description": "The display name for the extension."
+    },
+    "extension_description": {
+        "message": "open links in self tab, dark theme(working)...",
+        "description": "Description of what the extension does."
+    }
+}
