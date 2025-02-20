@@ -1,8 +1,8 @@
 {
     "manifest_version": 3,
     "default_locale": "en",
-    "name": "__MSG_extension_name__",
-    "description": "__MSG_extension_description__",
+    "name": "bilibili script",
+    "description": "some extra features for bilibili",
     "version": "1.0",
     "browser_specific_settings": {
         "gecko": {
@@ -37,5 +37,8 @@
         "default_popup": "popup.html",
         "default_icon": "images/toolbar-icon.svg"
     },
-    "permissions": []
+    "permissions": [
+        "activeTab",
+        "scripting"
+    ]
 }
