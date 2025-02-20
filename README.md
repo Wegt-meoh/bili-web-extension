@@ -23,3 +23,7 @@
 ### safari
 
 no support now
+
+## Help me
+
+why this plugin can only be installed in debugging?
