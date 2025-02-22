@@ -8,7 +8,10 @@ document.addEventListener('click', (e) => {
 });
 
 const video = document.querySelector("video");
-video.focus();
+
+while (video !== document.activeElement) {
+    video.focus();
+}
 
 document.addEventListener('keydown', (e) => {
     const volumeHint = document.querySelector(".bpx-player-volume-hint");
