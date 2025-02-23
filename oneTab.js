@@ -9,7 +9,7 @@ document.addEventListener('click', (e) => {
 
 const video = document.querySelector("video");
 
-while (video !== document.activeElement) {
+while (video && video !== document.activeElement) {
     video.focus();
 }
 
