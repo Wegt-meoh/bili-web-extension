@@ -13,6 +13,8 @@ while (video && video !== document.activeElement) {
     video.focus();
 }
 
+let volumeHintTimeout = null;
+
 document.addEventListener('keydown', (e) => {
     const volumeHint = document.querySelector(".bpx-player-volume-hint");
     const volumeHintText = volumeHint?.querySelector(".bpx-player-volume-hint-text");
@@ -38,6 +40,9 @@ document.addEventListener('keydown', (e) => {
     video.volume = (Math.round(video.volume * 100) + (flag ? 5 : -5)) / 100;
     volumeHintText.innerText = `${Math.round(video.volume * 100)}%`;
 
+    if (volumeHintTimeout) {
+        clearTimeout(volumeHintTimeout);
+    }
     volumeHint.style = "opacity: 1;";
     setTimeout(() => {
         volumeHint.style = "opacity: 0;display:none;";
