@@ -15,7 +15,7 @@ while (video && video !== document.activeElement) {
 
 document.addEventListener('keydown', (e) => {
     const volumeHint = document.querySelector(".bpx-player-volume-hint");
-    const volumeHintText = volumeHint.querySelector(".bpx-player-volume-hint-text");
+    const volumeHintText = volumeHint?.querySelector(".bpx-player-volume-hint-text");
 
     if (!video || !volumeHint || !volumeHintText) {
         return;
