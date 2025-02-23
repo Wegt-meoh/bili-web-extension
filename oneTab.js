@@ -9,7 +9,7 @@ document.addEventListener('click', (e) => {
 
 const video = document.querySelector("video");
 if (video) {
-    video.tabIndex = "0";
+    video.tabIndex = -1;
 
     const focusTimer = setInterval(() => {
         if (video && video !== document.activeElement) {
