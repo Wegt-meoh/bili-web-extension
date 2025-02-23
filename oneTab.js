@@ -8,9 +8,18 @@ document.addEventListener('click', (e) => {
 });
 
 const video = document.querySelector("video");
+if (video) {
+    video.tabIndex = "0";
 
-while (video && video !== document.activeElement) {
-    video.focus();
+    const focusTimer = setInterval(() => {
+        if (video && video !== document.activeElement) {
+            video.focus();
+        }
+
+        if (document.activeElement === video) {
+            clearInterval(focusTimer);
+        }
+    })
 }
 
 let volumeHintTimeout = null;
@@ -33,11 +42,14 @@ document.addEventListener('keydown', (e) => {
     const flag = e.key === "ArrowDown" ? false : true;
 
     if (video === document.activeElement) {
-        video.volume = (Math.round(video.volume * 100) - (flag ? 5 : -5)) / 100;
+        const val = (Math.round(video.volume * 100) - (flag ? 5 : -5)) / 100;
+        video.volume = val < 0 ? 0 : val > 1 ? 1 : val;
         return;
     }
 
-    video.volume = (Math.round(video.volume * 100) + (flag ? 5 : -5)) / 100;
+
+    const val = (Math.round(video.volume * 100) + (flag ? 5 : -5)) / 100;
+    video.volume = val < 0 ? 0 : val > 1 ? 1 : val;
     volumeHintText.innerText = `${Math.round(video.volume * 100)}%`;
 
     if (volumeHintTimeout) {
