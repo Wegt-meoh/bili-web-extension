@@ -5,20 +5,26 @@
     // normal
     styleEle.textContent = `
     .recommended-swipe.grid-anchor{
-    display: none
+        display: none
     }
+
     .desktop-download-tip{
-    display: none
+        display: none
     }
+
     .my-custom-button{
-    position: absolute;
-    top: 81px;
-    left: 100%;
+        position: absolute;
+        top: 81px;
+        left: 100%;
     }
-    .palette-button-outer{
-    display:none
+
+    .palette-button-outer,.floor-single-card{
+        display: none
+    }
+
+    .recommended-container_floor-aside>.container>div:not(.feed-card) {
+        display: none;
     }
     `
-
     document.head.appendChild(styleEle)
 })()
