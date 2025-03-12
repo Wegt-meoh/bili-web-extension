@@ -21,7 +21,8 @@
         {
             "js": [
                 "basicStyle.js",
-                "oneTab.js"
+                "onlyOneTab.js",
+                "video.js"
             ],
             "matches": [
                 "*://*.bilibili.com/*"
