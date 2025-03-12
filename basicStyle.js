@@ -15,6 +15,9 @@
     top: 81px;
     left: 100%;
     }
+    .palette-button-outer{
+    display:none
+    }
     `
 
     document.head.appendChild(styleEle)
