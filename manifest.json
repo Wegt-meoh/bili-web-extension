@@ -20,9 +20,7 @@
     "content_scripts": [
         {
             "js": [
-                "basicStyle.js",
-                "onlyOneTab.js",
-                "video.js"
+                "dist/content.js"
             ],
             "matches": [
                 "*://*.bilibili.com/*"
@@ -30,11 +28,13 @@
         }
     ],
     "action": {
-        "default_popup": "popup.html",
+        "default_popup": "src/popup/popup.html",
         "default_icon": "images/toolbar-icon.svg"
     },
     "permissions": [
         "activeTab",
-        "scripting"
+        "scripting",
+        "webRequest",
+        "declarativeNetRequest"
     ]
 }

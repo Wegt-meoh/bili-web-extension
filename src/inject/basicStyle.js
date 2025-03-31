@@ -1,6 +1,6 @@
-(function () {
+export function injectBasicStyle() {
     // css style to hide wide picture
-    const styleEle = document.createElement('style')
+    const styleEle = document.createElement('style');
 
     // normal
     styleEle.textContent = `
@@ -25,6 +25,7 @@
     .recommended-container_floor-aside>.container>div:not(.feed-card) {
         display: none;
     }
-    `
-    document.head.appendChild(styleEle)
-})()
+    `;
+
+    document.head.appendChild(styleEle);
+}
