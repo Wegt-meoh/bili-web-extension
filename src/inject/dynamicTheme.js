@@ -1,3 +1,5 @@
+import { CLASS_PREFIX, STYLE_SELECTOR, COLORFUL_PROPERTY } from "./const.js";
+
 async function setupListener() {
     if (typeof browser === 'undefined') {
         // eslint-disable-next-line
@@ -55,13 +57,13 @@ async function setTheme(theme) {
             document.documentElement.classList.remove('dark-bili');
             break;
         default:
-            document.documentElement.classList.add('dark-bili');
+            document.documentElement.classList.add(CLASS_PREFIX);
             break;
     }
     await saveConfig(theme);
 }
 
-const STYLE_SELECTOR = "style, link[rel*='stylesheet' i]:not([disabled])";
+
 
 function isFontsGoogleApiStyle(element) {
     if (typeof element.href !== "string") {
@@ -79,7 +81,6 @@ function isFontsGoogleApiStyle(element) {
 
 function shouldManageStyle(element) {
     if (!(element instanceof HTMLElement)) {
-        console.log("element not instanceof HTMLElement return false");
         return false;
     }
 
@@ -97,24 +98,21 @@ function shouldManageStyle(element) {
             !isFontsGoogleApiStyle(element)
         )
     ) &&
-        !element.classList.contains("dark-bili") &&
+        !element.classList.contains(CLASS_PREFIX) &&
         element.media.toLowerCase() !== "print" &&
         !element.classList.contains("stylus");
 }
 
 function getStyles(element, result = []) {
-    console.log("get styles on ", element);
 
     if (!(element instanceof Element || element instanceof Document)) {
-        console.log("not instanceof Element so return empty array");
+
         return result;
     }
 
     if (shouldManageStyle(element)) {
-        console.log("element should manage style push it to result");
         result.push(element);
     } else {
-        console.log("element should not manage style,query it");
         element.querySelectorAll(STYLE_SELECTOR).forEach(item => {
             getStyles(item, result);
         });
@@ -125,9 +123,81 @@ function getStyles(element, result = []) {
 
 export async function injectDynamicTheme() {
     //    await setupListener();
-    const allStyles = getStyles(document);
-    console.log("this is allstyles");
-    allStyles.forEach(s => {
-        console.log(s.textContent ?? "");
+    const allStyles = await Promise.all(getStyles(document).map(async (s) => {
+        let styleTextContent = "";
+        const injectStyle = document.createElement("style");
+        if (typeof s.textContent !== "string" || s.textContent.length === 0) {
+            const resp = await fetch(s.href);
+            styleTextContent = await resp.text();
+        } else {
+            styleTextContent = s.textContent;
+        }
+        injectStyle.textContent = styleTextContent;
+        return injectStyle;
+    }));
+    // f1f2f3 -> 34383a
+
+    document.head.append(...allStyles);
+
+    allStyles.forEach(style => {
+        if (!style.sheet) {
+            return;
+        }
+
+        const { cssRules } = style.sheet;
+
+        for (let i = 0; i < cssRules.length; i += 1) {
+            if (!(cssRules[i] instanceof CSSStyleRule)) {
+                continue;
+            }
+            const cssStyleRule = cssRules[i];
+            const cssStyleRuleStyle = cssStyleRule.style;
+            let result = [];
+            for (let key of COLORFUL_PROPERTY) {
+                const value = cssStyleRuleStyle.getPropertyValue(key);
+                if (value.length === 0 || value === "inherit") continue;
+                result.push({ key, value });
+            }
+            if (result.length > 0) {
+                // console.log(cssStyleRule.selectorText);
+                //console.log(result);
+                result.forEach(r => {
+                    getRGB(r.value);
+                });
+            }
+        }
     });
+}
+
+function getRGB(valueStr) {
+    console.log(`valueStr=${valueStr}`);
+    if (valueStr.includes("rgb")) {
+        const rgbRegex = /rgba?\(.*\)/g;
+        const rgbStrList = valueStr.matchAll(rgbRegex).map(item => item[0]);
+        rgbStrList.forEach(item => {
+            console.log(`rgb=${item}`);
+        });
+    } else {
+        const varRegex = /var\(--[\w-]+\)/g;
+        const varNameRegex = /--[\w-]+/;
+        const varStrList = valueStr.matchAll(varRegex).map(item => item[0]);
+        const computedStyle = getComputedStyle(document.documentElement);
+        varStrList.forEach(varStr => {
+            const varValue = computedStyle.getPropertyValue(varStr.match(varNameRegex)[0]);
+            console.log(`varStr=${varStr},varValue=${varValue}`);
+        });
+    }
+}
+
+function invertColor(rgb) {
+    const [r, g, b] = rgb.match(/rgb\((\d{1}),(\d{1}),(\d{1})\)/);
+    console.log(`rgb str=${rgb}=>r:${r},g=${g},b=${b}`);
+}
+
+function hexToRGB(hex) {
+    const result = [];
+    for (let i = 1; i < hex.length; i += 2) {
+        result.push(parseInt(hex.slice(i, i + 2), 16));
+    }
+    return result;
 }
