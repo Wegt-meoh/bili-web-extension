@@ -143,7 +143,7 @@ function getColorVar(valueStr) {
     const rgbRegex = /rgba?\(.*\)/g;
     const rgbStrList = valueStr.matchAll(rgbRegex).map(item => item[0]);
     rgbStrList.forEach(item => {
-        console.log(`rgb = ${item} `);
+        //console.log(`rgb = ${item} `);
     });
     const varRegex = /var\((--[\w-]+)\)/g;
     const varStrList = valueStr.matchAll(varRegex).map(item => item[1]);

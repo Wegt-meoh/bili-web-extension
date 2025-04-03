@@ -5,7 +5,7 @@ if (typeof browser === 'undefined') {
 
 async function loadConfig() {
     try {
-        const { theme } = await browser.storage.local.get('theme');
+        const theme = await localStorage.getItem('theme');
         if (typeof theme !== 'string') {
             await saveConfig('light');
             return "light";
@@ -19,20 +19,24 @@ async function loadConfig() {
 
 async function saveConfig(theme) {
     try {
-        await browser.storage.local.set({ theme });
+        await localStorage.setItem("theme", theme);
     } catch (error) {
         console.error(error);
     }
 }
 
-function sendMessage(theme) {
-    browser.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
+async function sendMessage(theme) {
+    try {
+        const tabs = await browser.tabs.query({ active: true, currentWindow: true });
         if (tabs.length <= 0) return;
 
         const activeTabId = tabs[0].id;
 
         browser.tabs.sendMessage(activeTabId, { theme });
-    });
+    } catch (err) {
+        console.error(err);
+        return Promise.reject(err);
+    }
 }
 
 await(async function() {
@@ -43,8 +47,9 @@ await(async function() {
 
     switchCheckbox.addEventListener('change', e => {
         const theme = e.target.checked ? 'dark' : 'light';
-
-        sendMessage(theme);
+        sendMessage(theme).then(() => {
+            saveConfig(theme);
+        });
     });
 
     // load config
