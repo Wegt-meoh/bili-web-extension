@@ -1,3 +1,4 @@
+import { extractRgbFromHex, invertHslColor, rgbToHexText } from "./color.js";
 import { CLASS_PREFIX, STYLE_SELECTOR, COLORFUL_PROPERTY } from "./const.js";
 
 async function setupListener() {
@@ -123,23 +124,25 @@ function getStyles(element, result = []) {
 
 export async function injectDynamicTheme() {
     //    await setupListener();
-    const allStyles = await Promise.all(getStyles(document).map(async (s) => {
+    const injectedStyleElemList = await Promise.all(getStyles(document).map(async (s) => {
         let styleTextContent = "";
-        const injectStyle = document.createElement("style");
+        const injectStyleElem = document.createElement("style");
         if (typeof s.textContent !== "string" || s.textContent.length === 0) {
             const resp = await fetch(s.href);
             styleTextContent = await resp.text();
         } else {
             styleTextContent = s.textContent;
         }
-        injectStyle.textContent = styleTextContent;
-        return injectStyle;
+        injectStyleElem.textContent = styleTextContent;
+        return injectStyleElem;
     }));
     // f1f2f3 -> 34383a
 
-    document.head.append(...allStyles);
+    document.head.append(...injectedStyleElemList);
 
-    allStyles.forEach(style => {
+    const varSet = new Set();
+
+    injectedStyleElemList.forEach(style => {
         if (!style.sheet) {
             return;
         }
@@ -162,42 +165,46 @@ export async function injectDynamicTheme() {
                 // console.log(cssStyleRule.selectorText);
                 //console.log(result);
                 result.forEach(r => {
-                    getRGB(r.value);
+                    const colorVarList = getColorVar(r.value);
+                    colorVarList.filter(item => item).forEach(item => {
+                        varSet.add(item.varStr);
+                    });
                 });
             }
+        }
+
+        style.remove();
+    });
+
+    const computedStyle = getComputedStyle(document.documentElement);
+    const darkThemeStyleElem = document.createElement("style");
+    darkThemeStyleElem.classList.add(CLASS_PREFIX);
+    darkThemeStyleElem.type = "text/css";
+    let cssContent = ":root{\n";
+    for (const item of varSet) {
+        const value = computedStyle.getPropertyValue(item);
+        const invertedColorValue = invertHslColor(...extractRgbFromHex(value));
+        cssContent += `${item}: ${rgbToHexText(...invertedColorValue)};\n`;
+    }
+    cssContent += "}";
+    darkThemeStyleElem.textContent = cssContent;
+    document.head.appendChild(darkThemeStyleElem);
+}
+
+function getColorVar(valueStr) {
+    //    const rgbRegex = /rgba?\(.*\)/g;
+    //    const rgbStrList = valueStr.matchAll(rgbRegex).map(item => item[0]);
+    //    rgbStrList.forEach(item => {
+    //        console.log(`rgb = ${ item } `);
+    //    });
+    const varRegex = /var\((--[\w-]+)\)/g;
+    const varStrList = valueStr.matchAll(varRegex).map(item => item[1]);
+    const computedStyle = getComputedStyle(document.documentElement);
+    return varStrList?.map(varStr => {
+        const varValue = computedStyle.getPropertyValue(varStr);
+        if (/rgba?\(\w+\)/.test(varValue) || /#\w+/.test(varValue)) {
+            return { varStr, varValue };
         }
     });
 }
 
-function getRGB(valueStr) {
-    console.log(`valueStr=${valueStr}`);
-    if (valueStr.includes("rgb")) {
-        const rgbRegex = /rgba?\(.*\)/g;
-        const rgbStrList = valueStr.matchAll(rgbRegex).map(item => item[0]);
-        rgbStrList.forEach(item => {
-            console.log(`rgb=${item}`);
-        });
-    } else {
-        const varRegex = /var\(--[\w-]+\)/g;
-        const varNameRegex = /--[\w-]+/;
-        const varStrList = valueStr.matchAll(varRegex).map(item => item[0]);
-        const computedStyle = getComputedStyle(document.documentElement);
-        varStrList.forEach(varStr => {
-            const varValue = computedStyle.getPropertyValue(varStr.match(varNameRegex)[0]);
-            console.log(`varStr=${varStr},varValue=${varValue}`);
-        });
-    }
-}
-
-function invertColor(rgb) {
-    const [r, g, b] = rgb.match(/rgb\((\d{1}),(\d{1}),(\d{1})\)/);
-    console.log(`rgb str=${rgb}=>r:${r},g=${g},b=${b}`);
-}
-
-function hexToRGB(hex) {
-    const result = [];
-    for (let i = 1; i < hex.length; i += 2) {
-        result.push(parseInt(hex.slice(i, i + 2), 16));
-    }
-    return result;
-}
