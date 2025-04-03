@@ -7,7 +7,7 @@ export default defineConfig({
                 content: "src/inject/index.js",
             },
             output: {
-                entryFileNames: "content.js",
+                entryFileNames: "[name].js",
                 format: "iife", // Immediately Invoked Function Expression (works in MV3)
             },
         },

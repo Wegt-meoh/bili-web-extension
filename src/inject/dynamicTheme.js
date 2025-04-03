@@ -1,71 +1,6 @@
 import { extractRGB, extractRgbFromHex, invertHslColor, rgbToHexText } from "./color.js";
 import { CLASS_PREFIX, STYLE_SELECTOR, COLORFUL_PROPERTY } from "./const.js";
 
-async function setupListener() {
-    if (typeof browser === 'undefined') {
-        // eslint-disable-next-line
-        var browser = chrome;
-    }
-
-
-    browser.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
-        setTheme(request.theme);
-    });
-
-
-    // load default settings
-    try {
-        const theme = await loadConfig();
-        setTheme(theme);
-    } catch (err) {
-        console.error(`load config failed: ${err}`);
-    }
-}
-
-async function saveConfig(theme) {
-    if (typeof browser === 'undefined') {
-        // eslint-disable-next-line
-        var browser = chrome;
-    }
-    try {
-        await browser.storage.local.set({ theme });
-    } catch (error) {
-        console.error(error);
-    }
-}
-
-async function loadConfig() {
-    if (typeof browser === 'undefined') {
-        // eslint-disable-next-line
-        var browser = chrome;
-    }
-    try {
-        let { theme } = await browser.storage.local.get('theme');
-        if (typeof theme !== 'string') {
-            await saveConfig('light');
-            return 'light';
-        }
-        return theme;
-    } catch (error) {
-        console.error(error);
-        return 'dark';
-    }
-}
-
-async function setTheme(theme) {
-    switch (theme) {
-        case 'light':
-            document.querySelector(`style.${CLASS_PREFIX}`)?.remove();
-            break;
-        default:
-            injectDynamicTheme();
-            break;
-    }
-    await saveConfig(theme);
-}
-
-
-
 function isFontsGoogleApiStyle(element) {
     if (typeof element.href !== "string") {
         return false;
@@ -178,7 +113,6 @@ async function getColorCssVarSet() {
 }
 
 export async function injectDynamicTheme() {
-    //await setupListener();
     const varSet = await getColorCssVarSet();
 
     const computedStyle = getComputedStyle(document.documentElement);
@@ -206,11 +140,11 @@ export async function injectDynamicTheme() {
 }
 
 function getColorVar(valueStr) {
-    //    const rgbRegex = /rgba?\(.*\)/g;
-    //    const rgbStrList = valueStr.matchAll(rgbRegex).map(item => item[0]);
-    //    rgbStrList.forEach(item => {
-    //        console.log(`rgb = ${ item } `);
-    //    });
+    const rgbRegex = /rgba?\(.*\)/g;
+    const rgbStrList = valueStr.matchAll(rgbRegex).map(item => item[0]);
+    rgbStrList.forEach(item => {
+        console.log(`rgb = ${item} `);
+    });
     const varRegex = /var\((--[\w-]+)\)/g;
     const varStrList = valueStr.matchAll(varRegex).map(item => item[1]);
     const computedStyle = getComputedStyle(document.documentElement);
