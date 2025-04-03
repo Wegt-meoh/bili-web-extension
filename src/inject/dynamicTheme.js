@@ -1,4 +1,4 @@
-import { extractRgbFromHex, invertHslColor, rgbToHexText } from "./color.js";
+import { extractRGB, extractRgbFromHex, invertHslColor, rgbToHexText } from "./color.js";
 import { CLASS_PREFIX, STYLE_SELECTOR, COLORFUL_PROPERTY } from "./const.js";
 
 async function setupListener() {
@@ -55,10 +55,10 @@ async function loadConfig() {
 async function setTheme(theme) {
     switch (theme) {
         case 'light':
-            document.documentElement.classList.remove('dark-bili');
+            document.querySelector(`style.${CLASS_PREFIX}`)?.remove();
             break;
         default:
-            document.documentElement.classList.add(CLASS_PREFIX);
+            injectDynamicTheme();
             break;
     }
     await saveConfig(theme);
@@ -122,9 +122,8 @@ function getStyles(element, result = []) {
     return result;
 }
 
-export async function injectDynamicTheme() {
-    //    await setupListener();
-    const injectedStyleElemList = await Promise.all(getStyles(document).map(async (s) => {
+async function getColorCssVarSet() {
+    const originalStyleElemList = await Promise.all(getStyles(document).map(async (s) => {
         let styleTextContent = "";
         const injectStyleElem = document.createElement("style");
         if (typeof s.textContent !== "string" || s.textContent.length === 0) {
@@ -136,13 +135,12 @@ export async function injectDynamicTheme() {
         injectStyleElem.textContent = styleTextContent;
         return injectStyleElem;
     }));
-    // f1f2f3 -> 34383a
 
-    document.head.append(...injectedStyleElemList);
+    document.head.append(...originalStyleElemList);
 
     const varSet = new Set();
 
-    injectedStyleElemList.forEach(style => {
+    originalStyleElemList.forEach(style => {
         if (!style.sheet) {
             return;
         }
@@ -176,15 +174,31 @@ export async function injectDynamicTheme() {
         style.remove();
     });
 
+    return varSet;
+}
+
+export async function injectDynamicTheme() {
+    //await setupListener();
+    const varSet = await getColorCssVarSet();
+
     const computedStyle = getComputedStyle(document.documentElement);
     const darkThemeStyleElem = document.createElement("style");
     darkThemeStyleElem.classList.add(CLASS_PREFIX);
     darkThemeStyleElem.type = "text/css";
     let cssContent = ":root{\n";
     for (const item of varSet) {
-        const value = computedStyle.getPropertyValue(item);
-        const invertedColorValue = invertHslColor(...extractRgbFromHex(value));
-        cssContent += `${item}: ${rgbToHexText(...invertedColorValue)};\n`;
+        const splitedVarValue = computedStyle.getPropertyValue(item).split(" ");
+        const convertedVarValues = splitedVarValue.map((varValue) => {
+            if (varValue.includes("rgb")) {
+                return rgbToHexText(...invertHslColor(extractRGB(varValue)));
+            } else if (varValue.includes("#")) {
+                return rgbToHexText(...invertHslColor(...extractRgbFromHex(varValue)));
+            } else {
+                return varValue;
+            }
+        });
+
+        cssContent += `${item}: ${convertedVarValues.join(" ")};\n`;
     }
     cssContent += "}";
     darkThemeStyleElem.textContent = cssContent;
