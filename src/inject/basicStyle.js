@@ -25,6 +25,10 @@ export function injectBasicStyle() {
     .recommended-container_floor-aside>.container>div:not(.feed-card) {
         display: none;
     }
+
+    .ad-report{
+        display:none;
+    }
     `;
 
     document.head.appendChild(styleEle);
