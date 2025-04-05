@@ -7,11 +7,16 @@ export async function setupListener() {
         var browser = chrome;
     }
 
-    browser.runtime.onMessage.addListener((request, _, sendResponse) => {
+    browser.runtime.onMessage.addListener((request) => {
         setTheme(request.theme);
     });
 
-
+    try {
+        const response = await browser.runtime.sendMessage({ type: "QUERY_THEME" });
+        setTheme(response);
+    } catch (err) {
+        console.error(err);
+    }
 }
 
 async function setTheme(theme) {

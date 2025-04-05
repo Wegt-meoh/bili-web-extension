@@ -5,10 +5,11 @@ export default defineConfig({
         rollupOptions: {
             input: {
                 content: "src/inject/index.js",
+                background: "src/background/index.js"
             },
             output: {
                 entryFileNames: "[name].js",
-                format: "iife", // Immediately Invoked Function Expression (works in MV3)
+                format: "es", // Immediately Invoked Function Expression (works in MV3),
             },
         },
         outDir: "dist",

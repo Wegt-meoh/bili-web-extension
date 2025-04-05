@@ -27,6 +27,9 @@
             ]
         }
     ],
+    "background": {
+        "service_worker": "src/background/index.js"
+    },
     "action": {
         "default_popup": "src/popup/popup.html",
         "default_icon": "images/toolbar-icon.svg"
@@ -35,6 +38,7 @@
         "activeTab",
         "scripting",
         "webRequest",
-        "declarativeNetRequest"
+        "declarativeNetRequest",
+        "storage"
     ]
 }
