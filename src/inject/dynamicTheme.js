@@ -103,25 +103,25 @@ export async function injectDynamicTheme() {
             return color;
         }
 
-        if (/^rgba?/.test(color)) {
+        if (/^rgba?\([\d., ]+\)/.test(color)) {
             return rgbToText(...invertRgbColor(...extractRGB(color)));
         } else if (color.startsWith("#")) {
             return rgbToHexText(...invertRgbColor(...extractRgbFromHex(color)));
-        } else if (color.startsWith("hsl")) {
+        } else if (/^hsla?\([\d, .%]+\)/.test(color)) {
             return hslToString(...invertHslColor(...extractHSL(color)));
-        }
-        else if (color.startsWith("var")) {
-            const matchResult = color.match(/var\((--[a-z\d-]+)[, ]*([a-z\d]+)?\)$/i);
+        } else if (color.startsWith("var")) {
+            const matchResult = color.match(/var\((--[a-z\d-]+)[, ]*([a-z\d#]+)?\)$/i);
             if (!matchResult) {
                 return color;
             }
             // eslint-disable-next-line no-unused-vars
             const [_, varName, fallback] = matchResult;
+
             if (!isOtherColorCssVar(varName)) {
                 return color;
             }
-            const prefixVar = `--${CLASS_PREFIX}-${varName.slice(2)}`;
-            return `var(${prefixVar}${fallback ? `, ${invertColor(fallback)}` : ""})`;
+
+            return `var(${varName}${fallback ? `, ${invertColor(fallback)}` : ""})`;
         } else {
             return color;
         }
@@ -145,18 +145,15 @@ export async function injectDynamicTheme() {
 
             for (const prop of cssStyleRuleStyle) {
                 const value = cssStyleRuleStyle.getPropertyValue(prop).trim();
-                const newValue = value.replaceAll(/(rgba?\([^)]+\)|hsla?\([^)]+\)|#[0-9a-f]{3,8}|var\(--[^)]+\)|\b[a-z-]+\b)/gi, color => invertColor(color)
+                const newValue = value.replaceAll(/(rgba?\([^)]+\)|hsla?\([^)]+\)|#[0-9a-f]{3,8}|var\(--[^)]+\)|\b[a-z-]+\b)/gi,
+                    color => invertColor(color)
                 );
 
                 if (value === newValue) {
                     continue;
                 }
 
-                if (prop.startsWith("--")) {
-                    modifiedRules.push({ prop: `--${CLASS_PREFIX}-${prop.slice(2)}`, newValue });
-                } else {
-                    modifiedRules.push({ prop, newValue });
-                }
+                modifiedRules.push({ prop, newValue });
             }
 
             if (modifiedRules.length > 0) {
@@ -187,5 +184,5 @@ export async function injectDynamicTheme() {
         return null;
     }).filter(item => item);
 
-    document.head.append(...injectedStyleElemList);
+    document.body.append(...injectedStyleElemList);
 }

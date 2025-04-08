@@ -15,7 +15,6 @@ export async function setupListener() {
         if (timer) {
             clearTimeout(timer);
         }
-        console.log("callback");
         timer = setTimeout(async () => {
             await setTheme(theme);
             start();
