@@ -1,5 +1,7 @@
-import { extractRGB, extractRgbFromHex, invertHslColor, rgbToHexText } from "./color.js";
-import { CLASS_PREFIX, STYLE_SELECTOR, COLORFUL_PROPERTY } from "./const.js";
+import { extractHSL, extractRGB, extractRgbFromHex, hslToString, invertHslColor, invertRgbColor, rgbToHexText, rgbToText } from "./color.js";
+import { CLASS_PREFIX, STYLE_SELECTOR, COLOR_KEYWORDS } from "./const.js";
+
+const rootComputedStyle = getComputedStyle(document.documentElement);
 
 function isFontsGoogleApiStyle(element) {
     if (typeof element.href !== "string") {
@@ -57,7 +59,26 @@ function getStyles(element, result = []) {
     return result;
 }
 
-async function getColorCssVarSet() {
+function isKeyWordColor(color) {
+    if (typeof color !== "string") {
+        throw new TypeError("color should be string");
+    }
+    return COLOR_KEYWORDS.has(color.toLowerCase());
+}
+
+function isOtherColor(color) {
+    if (typeof color !== "string") {
+        throw new TypeError("color should be string");
+    }
+    return /^(rgba?\(|hsla?\(|#|var\()/i.test(color);
+
+}
+
+function isOtherColorCssVar(variable) {
+    return isOtherColor(rootComputedStyle.getPropertyValue(variable).trim());
+}
+
+export async function injectDynamicTheme() {
     const originalStyleElemList = await Promise.all(getStyles(document).map(async (s) => {
         let styleTextContent = "";
         const injectStyleElem = document.createElement("style");
@@ -73,86 +94,98 @@ async function getColorCssVarSet() {
 
     document.head.append(...originalStyleElemList);
 
-    const varSet = new Set();
+    const invertColor = (color) => {
+        if (typeof color !== "string") {
+            throw new Error("color must be string");
+        }
 
-    originalStyleElemList.forEach(style => {
+        if (isKeyWordColor(color) || !isOtherColor(color)) {
+            return color;
+        }
+
+        if (/^rgba?/.test(color)) {
+            return rgbToText(...invertRgbColor(...extractRGB(color)));
+        } else if (color.startsWith("#")) {
+            return rgbToHexText(...invertRgbColor(...extractRgbFromHex(color)));
+        } else if (color.startsWith("hsl")) {
+            return hslToString(...invertHslColor(...extractHSL(color)));
+        }
+        else if (color.startsWith("var")) {
+            const matchResult = color.match(/var\((--[a-z\d-]+)[, ]*([a-z\d]+)?\)$/i);
+            if (!matchResult) {
+                return color;
+            }
+            // eslint-disable-next-line no-unused-vars
+            const [_, varName, fallback] = matchResult;
+            if (!isOtherColorCssVar(varName)) {
+                return color;
+            }
+            const prefixVar = `--${CLASS_PREFIX}-${varName.slice(2)}`;
+            return `var(${prefixVar}${fallback ? `, ${invertColor(fallback)}` : ""})`;
+        } else {
+            return color;
+        }
+    };
+
+    const injectedStyleElemList = originalStyleElemList.map(style => {
         if (!style.sheet) {
-            return;
+            return null;
         }
 
         const { cssRules } = style.sheet;
-
+        const modifiedCssRules = [];
         for (let i = 0; i < cssRules.length; i += 1) {
             if (!(cssRules[i] instanceof CSSStyleRule)) {
                 continue;
             }
+
             const cssStyleRule = cssRules[i];
             const cssStyleRuleStyle = cssStyleRule.style;
-            let result = [];
-            for (let key of COLORFUL_PROPERTY) {
-                const value = cssStyleRuleStyle.getPropertyValue(key);
-                if (value.length === 0 || value === "inherit") continue;
-                result.push({ key, value });
+            const modifiedRules = [];
+
+            for (const prop of cssStyleRuleStyle) {
+                const value = cssStyleRuleStyle.getPropertyValue(prop).trim();
+                const newValue = value.replaceAll(/(rgba?\([^)]+\)|hsla?\([^)]+\)|#[0-9a-f]{3,8}|var\(--[^)]+\)|\b[a-z-]+\b)/gi, color => invertColor(color)
+                );
+
+                if (value === newValue) {
+                    continue;
+                }
+
+                if (prop.startsWith("--")) {
+                    modifiedRules.push({ prop: `--${CLASS_PREFIX}-${prop.slice(2)}`, newValue });
+                } else {
+                    modifiedRules.push({ prop, newValue });
+                }
             }
-            if (result.length > 0) {
-                // console.log(cssStyleRule.selectorText);
-                //console.log(result);
-                result.forEach(r => {
-                    const colorVarList = getColorVar(r.value);
-                    colorVarList.filter(item => item).forEach(item => {
-                        varSet.add(item.varStr);
-                    });
-                });
+
+            if (modifiedRules.length > 0) {
+                modifiedCssRules.push({ selectText: cssStyleRule.selectorText, rules: modifiedRules });
             }
         }
 
         style.remove();
-    });
 
-    return varSet;
-}
+        if (modifiedCssRules.length > 0) {
+            const injectedStyleElem = document.createElement("style");
+            injectedStyleElem.classList.add(CLASS_PREFIX);
+            injectedStyleElem.type = "text/css";
+            let textContent = "";
 
-export async function injectDynamicTheme() {
-    const varSet = await getColorCssVarSet();
+            modifiedCssRules.forEach(cssRule => {
+                textContent += cssRule.selectText + "{\n";
+                cssRule.rules.forEach(rule => {
+                    const { prop, newValue } = rule;
+                    textContent += `${prop}: ${newValue};\n`;
+                });
+                textContent += "}\n";
+            });
+            injectedStyleElem.textContent = textContent;
 
-    const computedStyle = getComputedStyle(document.documentElement);
-    const darkThemeStyleElem = document.createElement("style");
-    darkThemeStyleElem.classList.add(CLASS_PREFIX);
-    darkThemeStyleElem.type = "text/css";
-    let cssContent = ":root{\n";
-    for (const item of varSet) {
-        const splitedVarValue = computedStyle.getPropertyValue(item).split(" ");
-        const convertedVarValues = splitedVarValue.map((varValue) => {
-            if (varValue.includes("rgb")) {
-                return rgbToHexText(...invertHslColor(extractRGB(varValue)));
-            } else if (varValue.includes("#")) {
-                return rgbToHexText(...invertHslColor(...extractRgbFromHex(varValue)));
-            } else {
-                return varValue;
-            }
-        });
-
-        cssContent += `${item}: ${convertedVarValues.join(" ")};\n`;
-    }
-    cssContent += "}";
-    darkThemeStyleElem.textContent = cssContent;
-    document.head.appendChild(darkThemeStyleElem);
-}
-
-function getColorVar(valueStr) {
-    const rgbRegex = /rgba?\(.*\)/g;
-    const rgbStrList = valueStr.matchAll(rgbRegex).map(item => item[0]);
-    rgbStrList.forEach(item => {
-        //console.log(`rgb = ${item} `);
-    });
-    const varRegex = /var\((--[\w-]+)\)/g;
-    const varStrList = valueStr.matchAll(varRegex).map(item => item[1]);
-    const computedStyle = getComputedStyle(document.documentElement);
-    return varStrList?.map(varStr => {
-        const varValue = computedStyle.getPropertyValue(varStr);
-        if (/rgba?\(\w+\)/.test(varValue) || /#\w+/.test(varValue)) {
-            return { varStr, varValue };
+            return injectedStyleElem;
         }
-    });
-}
+        return null;
+    }).filter(item => item);
 
+    document.head.append(...injectedStyleElemList);
+}

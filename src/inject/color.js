@@ -1,6 +1,26 @@
 export function extractRGB(color) {
-    const match = color.match(/\d+/g);
-    return match ? match.map(Number) : null;
+    const match = color.match(/[\d.]+/g);
+    return match ? match.map(parseFloat) : null;
+}
+
+export function extractHSL(color) {
+    if (typeof color !== "string") {
+        throw new TypeError("color must be string");
+    }
+    const matchResult = color.match(/[\d.]+%?/g);
+    if (!matchResult) {
+        throw new Error("can not extract hsl from color: " + color);
+    };
+    return matchResult.map(v => {
+        if (v.includes("%")) {
+            return parseFloat(v) / 100;
+        }
+        return parseFloat(v);
+    });
+}
+
+export function hslToString(h, s, l, a) {
+    return `hsl${a ? 'a' : ''}(${h}, ${s * 100}%, ${l * 100}%${a ? `, ${a}` : ''})`;
 }
 
 export function extractRgbFromHex(hex) {
@@ -31,6 +51,10 @@ export function rgbToRgbText(r, g, b, a) {
 
 export function rgbToHexText(r, g, b, a) {
     return `#${r.toString(16)}${g.toString(16)}${b.toString(16)}${a ? a.toString(16) : ""}`;
+}
+
+export function rgbToText(r, g, b, a) {
+    return `rgb${a ? 'a' : ''}(${r}, ${g}, ${b}${a ? `, ${a}` : ''})`;
 }
 
 export function rgbToHsl(r, g, b) {
@@ -76,7 +100,14 @@ export function hslToRgb(h, s, l) {
     return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
 }
 
-export function invertHslColor(r, g, b) {
+export function invertHslColor(h, s, l, a) {
+    if (a) {
+        return [h, s, 1 - l, a];
+    }
+    return [h, s, 1 - l];
+}
+
+export function invertRgbColor(r, g, b, a) {
     let [h, s, l] = rgbToHsl(r, g, b);
-    return hslToRgb(h, s, 1 - l); // Invert only lightness
+    return [...hslToRgb(...invertHslColor(h, s, l)), a];
 }
