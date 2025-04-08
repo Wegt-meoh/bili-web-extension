@@ -121,7 +121,7 @@ export async function injectDynamicTheme() {
                 return color;
             }
 
-            return `var(${varName}${fallback ? `, ${invertColor(fallback)}` : ""})`;
+            return ` var(${varName}${fallback ? `, ${invertColor(fallback)}` : ""})`;
         } else {
             return color;
         }
