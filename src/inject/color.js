@@ -45,12 +45,9 @@ export function extractRgbFromHex(hex) {
 
     return [r, g, b]; // Returns an array [r, g, b]
 }
-export function rgbToRgbText(r, g, b, a) {
-    return a ? `rgba(${r},${g},${b},${a})` : `rgb(${r},${g},${b})`;
-}
 
 export function rgbToHexText(r, g, b, a) {
-    return `#${r.toString(16)}${g.toString(16)}${b.toString(16)}${a ? a.toString(16) : ""}`;
+    return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}${a ? Math.round(a * 255).toString(16).padStart(2, "0") : ""}`;
 }
 
 export function rgbToText(r, g, b, a) {

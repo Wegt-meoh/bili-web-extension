@@ -1,5 +1,5 @@
 export const CLASS_PREFIX = "dark-bili";
-export const STYLE_SELECTOR = "style, link[rel*='stylesheet' i]:not([disabled])";
+export const STYLE_SELECTOR = "style:not([class*='dark-']), link[rel*='stylesheet' i]:not([disabled])";
 export const COLOR_KEYWORDS = new Set([
     "aliceblue", "antiquewhite", "aqua", "aquamarine", "azure", "beige", "bisque", "black",
     "blanchedalmond", "blue", "blueviolet", "brown", "burlywood", "cadetblue", "chartreuse",
