@@ -20,7 +20,7 @@ export function extractHSL(color) {
 }
 
 export function hslToString(h, s, l, a) {
-    return `hsl${a ? 'a' : ''}(${h}, ${s * 100}%, ${l * 100}%${a ? `, ${a}` : ''})`;
+    return `hsl${a !== undefined ? 'a' : ''}(${h}, ${s * 100}%, ${l * 100}%${a !== undefined ? `, ${a}` : ''})`;
 }
 
 export function extractRgbFromHex(hex) {
@@ -47,11 +47,11 @@ export function extractRgbFromHex(hex) {
 }
 
 export function rgbToHexText(r, g, b, a) {
-    return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}${a ? Math.round(a * 255).toString(16).padStart(2, "0") : ""}`;
+    return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}${a !== undefined ? Math.round(a * 255).toString(16).padStart(2, "0") : ""}`;
 }
 
 export function rgbToText(r, g, b, a) {
-    return `rgb${a ? 'a' : ''}(${r}, ${g}, ${b}${a ? `, ${a}` : ''})`;
+    return `rgb${a !== undefined ? 'a' : ''}(${r}, ${g}, ${b}${a !== undefined ? `, ${a}` : ''})`;
 }
 
 export function rgbToHsl(r, g, b) {
@@ -98,7 +98,7 @@ export function hslToRgb(h, s, l) {
 }
 
 export function invertHslColor(h, s, l, a) {
-    if (a) {
+    if (a !== undefined) {
         return [h, s, 1 - l, a];
     }
     return [h, s, 1 - l];
