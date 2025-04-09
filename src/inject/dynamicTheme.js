@@ -78,6 +78,51 @@ function isOtherColorCssVar(variable) {
     return isOtherColor(rootComputedStyle.getPropertyValue(variable).trim());
 }
 
+function invertColor(prop, color) {
+    if (typeof color !== "string") {
+        return color;
+    }
+
+    if (isKeyWordColor(color) || !isOtherColor(color)) {
+        return color;
+    }
+
+    if (/^rgba?\([\d., ]+\)/.test(color)) {
+        const [r, g, b] = extractRGB(color);
+        if ((isDarkColor(r, g, b) && /^background.*/i.test(prop)) || (!isDarkColor(r, g, b) && /^color/i.test(prop))) {
+            return color;
+        }
+        return rgbToText(...invertRgbColor(r, g, b));
+    } else if (color.startsWith("#")) {
+        const [r, g, b] = extractRgbFromHex(color);
+        if ((isDarkColor(r, g, b) && /^background.*/i.test(prop)) || (!isDarkColor(r, g, b) && /^color/i.test(prop))) {
+            return color;
+        }
+        return rgbToHexText(...invertRgbColor(r, g, b));
+    } else if (/^hsla?\([\d, .%]+\)/.test(color)) {
+        const [h, s, l] = extractHSL(color);
+        if ((l < 0.5 && /background.*/.test(prop)) || (l >= 0.5 && /color/.test(prop))) {
+            return color;
+        }
+        return hslToString(...invertHslColor(h, s, l));
+    } else if (color.startsWith("var")) {
+        const matchResult = color.match(/var\((--[a-z\d-]+)[, ]*([a-z\d#]+)?\)$/i);
+        if (!matchResult) {
+            return color;
+        }
+        // eslint-disable-next-line no-unused-vars
+        const [_, varName, fallback] = matchResult;
+
+        if (!isOtherColorCssVar(varName)) {
+            return color;
+        }
+
+        return ` var(${varName}${fallback ? `, ${invertColor(fallback)}` : ""})`;
+    } else {
+        return color;
+    }
+};
+
 export async function injectDynamicTheme() {
     const originalStyleElemList = await Promise.all(getStyles(document).map(async (s) => {
         let styleTextContent = "";
@@ -93,51 +138,6 @@ export async function injectDynamicTheme() {
     }));
 
     document.head.append(...originalStyleElemList);
-
-    const invertColor = (prop, color) => {
-        if (typeof color !== "string") {
-            return color;
-        }
-
-        if (isKeyWordColor(color) || !isOtherColor(color)) {
-            return color;
-        }
-
-        if (/^rgba?\([\d., ]+\)/.test(color)) {
-            const [r, g, b] = extractRGB(color);
-            if ((isDarkColor(r, g, b) && /^background.*/i.test(prop)) || (!isDarkColor(r, g, b) && /^color/i.test(prop))) {
-                return color;
-            }
-            return rgbToText(...invertRgbColor(r, g, b));
-        } else if (color.startsWith("#")) {
-            const [r, g, b] = extractRgbFromHex(color);
-            if ((isDarkColor(r, g, b) && /^background.*/i.test(prop)) || (!isDarkColor(r, g, b) && /^color/i.test(prop))) {
-                return color;
-            }
-            return rgbToHexText(...invertRgbColor(r, g, b));
-        } else if (/^hsla?\([\d, .%]+\)/.test(color)) {
-            const [h, s, l] = extractHSL(color);
-            if ((l < 0.5 && /background.*/.test(prop)) || (l >= 0.5 && /color/.test(prop))) {
-                return color;
-            }
-            return hslToString(...invertHslColor(h, s, l));
-        } else if (color.startsWith("var")) {
-            const matchResult = color.match(/var\((--[a-z\d-]+)[, ]*([a-z\d#]+)?\)$/i);
-            if (!matchResult) {
-                return color;
-            }
-            // eslint-disable-next-line no-unused-vars
-            const [_, varName, fallback] = matchResult;
-
-            if (!isOtherColorCssVar(varName)) {
-                return color;
-            }
-
-            return ` var(${varName}${fallback ? `, ${invertColor(fallback)}` : ""})`;
-        } else {
-            return color;
-        }
-    };
 
     const injectedStyleElemList = originalStyleElemList.map(style => {
         if (!style.sheet) {
@@ -193,6 +193,7 @@ export async function injectDynamicTheme() {
 
             return injectedStyleElem;
         }
+
         return null;
     }).filter(item => item);
 
