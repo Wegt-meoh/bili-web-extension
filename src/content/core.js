@@ -127,6 +127,7 @@ export async function injectDynamicTheme() {
     const originalStyleElemList = await Promise.all(getStyles(document).map(async (s) => {
         let styleTextContent = "";
         const injectStyleElem = document.createElement("style");
+        injectStyleElem.classList.add(CLASS_PREFIX);
         if (typeof s.textContent !== "string" || s.textContent.length === 0) {
             const resp = await fetch(s.href);
             styleTextContent = await resp.text();
