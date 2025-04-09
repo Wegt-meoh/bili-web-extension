@@ -7,50 +7,45 @@ export async function setupListener() {
         var browser = chrome;
     }
 
-    let theme;
-
     browser.runtime.onMessage.addListener((request) => {
-        theme = request.theme;
+        const theme = request.theme;
         setTheme(theme);
     });
 
     try {
-        theme = await browser.runtime.sendMessage({ type: "QUERY_THEME" });
+        const theme = await browser.runtime.sendMessage({ type: "QUERY_THEME" });
         await setTheme(theme);
-        observeHeadChanges(() => {
-            setTheme(theme);
-        });
+        observeHeadChanges();
     } catch (err) {
         console.error(err);
     }
 }
 
 async function setTheme(theme) {
-    document.querySelectorAll(`style.${CLASS_PREFIX}`).forEach(item => item.remove());
+    if (theme === "light") {
+        document.querySelectorAll(`style.${CLASS_PREFIX}`).forEach(item => item.remove());
+    }
+
     if (theme === "dark") {
-        await injectDynamicTheme();
+        await injectDynamicTheme(document);
     }
 }
 
-function observeHeadChanges(callback) {
+function observeHeadChanges() {
     const target = document.head;
 
     const observer = new MutationObserver((mutationsList) => {
         for (const mutation of mutationsList) {
             if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
-                let flag = false;
                 mutation.addedNodes.forEach(item => {
                     if (item instanceof HTMLStyleElement && !item.classList.contains(CLASS_PREFIX)) {
-                        flag = true;
+                        injectDynamicTheme(item);
                     } else if (item instanceof HTMLLinkElement &&
                         !item.classList.contains(CLASS_PREFIX) &&
                         /stylesheet/i.test(item.rel)) {
-                        flag = true;
+                        injectDynamicTheme(item);
                     }
                 });
-                if (flag) {
-                    callback(mutation.addedNodes);
-                }
             }
         }
     });

@@ -123,8 +123,8 @@ function invertColor(prop, color) {
     }
 };
 
-export async function injectDynamicTheme() {
-    const originalStyleElemList = await Promise.all(getStyles(document).map(async (s) => {
+export async function injectDynamicTheme(element) {
+    const originalStyleElemList = await Promise.all(getStyles(element).map(async (s) => {
         let styleTextContent = "";
         const injectStyleElem = document.createElement("style");
         injectStyleElem.classList.add(CLASS_PREFIX);
