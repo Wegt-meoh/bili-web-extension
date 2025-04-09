@@ -42,9 +42,7 @@ function shouldManageStyle(element) {
 }
 
 function getStyles(element, result = []) {
-
     if (!(element instanceof Element || element instanceof Document)) {
-
         return result;
     }
 
@@ -117,7 +115,7 @@ function invertColor(prop, color) {
             return color;
         }
 
-        return ` var(${varName}${fallback ? `, ${invertColor(fallback)}` : ""})`;
+        return ` var(${varName}${fallback ? `, ${invertColor(prop, fallback)}` : ""})`;
     } else {
         return color;
     }
