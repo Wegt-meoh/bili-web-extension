@@ -1,4 +1,4 @@
-import { extractHSL, extractRGB, extractRgbFromHex, hslToString, invertHslColor, invertRgbColor, isDarkColor, rgbToHexText, rgbToHsl, rgbToText } from "./color.js";
+import { extractHSL, extractRGB, extractRgbFromHex, hslToString, invertHslColor, invertRgbColor, isDarkColor, rgbToHexText, rgbToText } from "./color.js";
 import { CLASS_PREFIX, STYLE_SELECTOR, COLOR_KEYWORDS } from "./const.js";
 
 const rootComputedStyle = getComputedStyle(document.documentElement);
