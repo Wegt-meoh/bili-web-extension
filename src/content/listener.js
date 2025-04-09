@@ -17,7 +17,7 @@ export async function setupListener() {
     try {
         theme = await browser.runtime.sendMessage({ type: "QUERY_THEME" });
         await setTheme(theme);
-        observeRootChanges(() => {
+        observeHeadChanges(() => {
             setTheme(theme);
         });
     } catch (err) {
@@ -32,8 +32,8 @@ async function setTheme(theme) {
     }
 }
 
-function observeRootChanges(callback) {
-    const target = document.documentElement;
+function observeHeadChanges(callback) {
+    const target = document.head;
 
     const observer = new MutationObserver((mutationsList) => {
         for (const mutation of mutationsList) {
