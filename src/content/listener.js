@@ -17,6 +17,9 @@ export async function setupListener() {
     try {
         theme = await browser.runtime.sendMessage({ type: "QUERY_THEME" });
         await setTheme(theme);
+        observeRootChanges(() => {
+            setTheme(theme);
+        });
     } catch (err) {
         console.error(err);
     }
@@ -27,4 +30,30 @@ async function setTheme(theme) {
     if (theme === "dark") {
         await injectDynamicTheme();
     }
+}
+
+function observeRootChanges(callback) {
+    const target = document.documentElement;
+
+    const observer = new MutationObserver((mutationsList) => {
+        for (const mutation of mutationsList) {
+            if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
+                let flag = false;
+                mutation.addedNodes.forEach(item => {
+                    if (item instanceof HTMLStyleElement && !item.classList.contains(CLASS_PREFIX)) {
+                        flag = true;
+                    } else if (item instanceof HTMLLinkElement &&
+                        !item.classList.contains(CLASS_PREFIX) &&
+                        /stylesheet/i.test(item.rel)) {
+                        flag = true;
+                    }
+                });
+                if (flag) {
+                    callback(mutation.addedNodes);
+                }
+            }
+        }
+    });
+
+    observer.observe(target, { childList: true, subtree: false });
 }
