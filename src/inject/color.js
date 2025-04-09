@@ -28,7 +28,7 @@ export function extractRgbFromHex(hex) {
     hex = hex.replace(/^#/, "");
 
     // Parse different hex formats
-    let r, g, b;
+    let r, g, b, a;
     if (hex.length === 3) {
         // Short format (e.g., #f80 → #ff8800)
         r = parseInt(hex[0] + hex[0], 16);
@@ -39,6 +39,12 @@ export function extractRgbFromHex(hex) {
         r = parseInt(hex.substring(0, 2), 16);
         g = parseInt(hex.substring(2, 4), 16);
         b = parseInt(hex.substring(4, 6), 16);
+    } else if (hex.length === 8) {
+        r = parseInt(hex.substring(0, 2), 16);
+        g = parseInt(hex.substring(2, 4), 16);
+        b = parseInt(hex.substring(4, 6), 16);
+        a = parseInt(hex.substring(6, 8), 16) / 255;
+        return [r, g, b, a];
     } else {
         throw new Error("Invalid hex color format");
     }
@@ -116,4 +122,14 @@ export function invertHslColor(h, s, l, a) {
 export function invertRgbColor(r, g, b, a) {
     let [h, s, l] = rgbToHsl(r, g, b);
     return [...hslToRgb(...invertHslColor(h, s, l)), a];
+}
+
+export function isDarkColor(r, g, b) {
+    // eslint-disable-next-line no-unused-vars
+    const [h, s, l] = rgbToHsl(r, g, b);
+    if (l < 0.5) {
+        return true;
+    }
+
+    return false;
 }

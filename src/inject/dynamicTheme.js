@@ -1,4 +1,4 @@
-import { extractHSL, extractRGB, extractRgbFromHex, hslToString, invertHslColor, invertRgbColor, rgbToHexText, rgbToText } from "./color.js";
+import { extractHSL, extractRGB, extractRgbFromHex, hslToString, invertHslColor, invertRgbColor, isDarkColor, rgbToHexText, rgbToHsl, rgbToText } from "./color.js";
 import { CLASS_PREFIX, STYLE_SELECTOR, COLOR_KEYWORDS } from "./const.js";
 
 const rootComputedStyle = getComputedStyle(document.documentElement);
@@ -94,9 +94,9 @@ export async function injectDynamicTheme() {
 
     document.head.append(...originalStyleElemList);
 
-    const invertColor = (color) => {
+    const invertColor = (prop, color) => {
         if (typeof color !== "string") {
-            throw new Error("color must be string");
+            return color;
         }
 
         if (isKeyWordColor(color) || !isOtherColor(color)) {
@@ -104,11 +104,23 @@ export async function injectDynamicTheme() {
         }
 
         if (/^rgba?\([\d., ]+\)/.test(color)) {
-            return rgbToText(...invertRgbColor(...extractRGB(color)));
+            const [r, g, b] = extractRGB(color);
+            if ((isDarkColor(r, g, b) && /^background.*/i.test(prop)) || (!isDarkColor(r, g, b) && /^color/i.test(prop))) {
+                return color;
+            }
+            return rgbToText(...invertRgbColor(r, g, b));
         } else if (color.startsWith("#")) {
-            return rgbToHexText(...invertRgbColor(...extractRgbFromHex(color)));
+            const [r, g, b] = extractRgbFromHex(color);
+            if ((isDarkColor(r, g, b) && /^background.*/i.test(prop)) || (!isDarkColor(r, g, b) && /^color/i.test(prop))) {
+                return color;
+            }
+            return rgbToHexText(...invertRgbColor(r, g, b));
         } else if (/^hsla?\([\d, .%]+\)/.test(color)) {
-            return hslToString(...invertHslColor(...extractHSL(color)));
+            const [h, s, l] = extractHSL(color);
+            if ((l < 0.5 && /background.*/.test(prop)) || (l >= 0.5 && /color/.test(prop))) {
+                return color;
+            }
+            return hslToString(...invertHslColor(h, s, l));
         } else if (color.startsWith("var")) {
             const matchResult = color.match(/var\((--[a-z\d-]+)[, ]*([a-z\d#]+)?\)$/i);
             if (!matchResult) {
@@ -146,7 +158,7 @@ export async function injectDynamicTheme() {
             for (const prop of cssStyleRuleStyle) {
                 const value = cssStyleRuleStyle.getPropertyValue(prop).trim();
                 const newValue = value.replaceAll(/(rgba?\([^)]+\)|hsla?\([^)]+\)|#[0-9a-f]{3,8}|var\(--[^)]+\)|\b[a-z-]+\b)/gi,
-                    color => invertColor(color)
+                    color => invertColor(prop, color)
                 );
 
                 if (value === newValue) {

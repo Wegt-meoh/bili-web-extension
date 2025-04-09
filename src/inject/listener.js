@@ -50,12 +50,23 @@ async function setTheme(theme) {
 }
 
 function observeHeadChanges(callback) {
-    const head = document.head;
+    const target = document.documentElement;
 
     const observer = new MutationObserver((mutationsList) => {
         for (const mutation of mutationsList) {
             if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
-                callback(mutation.addedNodes);
+                console.log("change");
+                let flag = false;
+                mutation.addedNodes.forEach(item => {
+                    if (item instanceof HTMLStyleElement) {
+                        flag = true;
+                    } else if (item instanceof HTMLLinkElement && /stylesheet/i.test(item.rel)) {
+                        flag = true;
+                    }
+                });
+                if (flag) {
+                    callback(mutation.addedNodes);
+                }
             }
         }
     });
@@ -66,7 +77,8 @@ function observeHeadChanges(callback) {
     };
 
     const start = () => {
-        observer.observe(head, { childList: true, subtree: false });
+        observer.observe(target, { childList: true, subtree: false });
+
     };
     return [start, pause];
 }
