@@ -1,5 +1,5 @@
-import { CLASS_PREFIX } from "../inject/const";
-import { injectDynamicTheme } from "../inject/dynamicTheme";
+import { CLASS_PREFIX } from "../content/const";
+import { injectDynamicTheme } from "../content/core";
 
 export async function setupListener() {
     if (typeof browser === 'undefined') {

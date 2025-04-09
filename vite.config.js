@@ -4,7 +4,7 @@ export default defineConfig({
     build: {
         rollupOptions: {
             input: {
-                content: "src/inject/index.js",
+                content: "src/content/index.js",
                 background: "src/background/index.js"
             },
             output: {
