@@ -34,6 +34,12 @@ export function extractRgbFromHex(hex) {
         r = parseInt(hex[0] + hex[0], 16);
         g = parseInt(hex[1] + hex[1], 16);
         b = parseInt(hex[2] + hex[2], 16);
+    } else if (hex.length === 4) {
+        r = parseInt(hex[0] + hex[0], 16);
+        g = parseInt(hex[1] + hex[1], 16);
+        b = parseInt(hex[2] + hex[2], 16);
+        a = parseInt(hex[3] + hex[3], 16) / 255;
+        return [r, g, b, a];
     } else if (hex.length === 6) {
         // Full format (e.g., #ff5733)
         r = parseInt(hex.substring(0, 2), 16);
@@ -46,7 +52,7 @@ export function extractRgbFromHex(hex) {
         a = parseInt(hex.substring(6, 8), 16) / 255;
         return [r, g, b, a];
     } else {
-        throw new Error("Invalid hex color format");
+        throw new Error("Invalid hex color format hex=" + hex);
     }
 
     return [r, g, b]; // Returns an array [r, g, b]
