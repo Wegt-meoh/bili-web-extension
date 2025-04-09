@@ -88,23 +88,23 @@ function invertColor(prop, color) {
     }
 
     if (/^rgba?\([\d., ]+\)/.test(color)) {
-        const [r, g, b] = extractRGB(color);
+        const [r, g, b, a] = extractRGB(color);
         if ((isDarkColor(r, g, b) && /^background.*/i.test(prop)) || (!isDarkColor(r, g, b) && /^color/i.test(prop))) {
             return color;
         }
-        return rgbToText(...invertRgbColor(r, g, b));
+        return rgbToText(...invertRgbColor(r, g, b, a));
     } else if (color.startsWith("#")) {
-        const [r, g, b] = extractRgbFromHex(color);
+        const [r, g, b, a] = extractRgbFromHex(color);
         if ((isDarkColor(r, g, b) && /^background.*/i.test(prop)) || (!isDarkColor(r, g, b) && /^color/i.test(prop))) {
             return color;
         }
-        return rgbToHexText(...invertRgbColor(r, g, b));
+        return rgbToHexText(...invertRgbColor(r, g, b, a));
     } else if (/^hsla?\([\d, .%]+\)/.test(color)) {
-        const [h, s, l] = extractHSL(color);
+        const [h, s, l, a] = extractHSL(color);
         if ((l < 0.5 && /background.*/.test(prop)) || (l >= 0.5 && /color/.test(prop))) {
             return color;
         }
-        return hslToString(...invertHslColor(h, s, l));
+        return hslToString(...invertHslColor(h, s, l, a));
     } else if (color.startsWith("var")) {
         const matchResult = color.match(/var\((--[a-z\d-]+)[, ]*([a-z\d#]+)?\)$/i);
         if (!matchResult) {
