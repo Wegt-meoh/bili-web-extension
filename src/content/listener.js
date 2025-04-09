@@ -57,4 +57,3 @@ function observeRootChanges(callback) {
 
     observer.observe(target, { childList: true, subtree: false });
 }
-
