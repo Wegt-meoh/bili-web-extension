@@ -1,19 +1,7 @@
-function injectBasicStyle() {
-    // css style to hide wide picture
+import { BASIC_STYLE } from "./const";
+
+export function injectBasicStyle() {
     const styleEle = document.createElement('style');
-
-    // normal
-    styleEle.textContent = `
-    .desktop-download-tip, .palette-button-outer, .floor-single-card, .ad-report, .bg, .bgc{
-        display: none;
-    }
-
-    .dark-bili body{
-        background: rgb(24, 26, 27);
-    }
-    `;
-
+    styleEle.textContent = BASIC_STYLE;
     (document.head || document.documentElement).appendChild(styleEle);
 }
-
-injectBasicStyle();
