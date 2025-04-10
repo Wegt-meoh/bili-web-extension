@@ -5,49 +5,46 @@ on:
 
 jobs:
   build:
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup NodeJs
-      - uses: actions/setup-node@v4
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
       - name: Install pnpm
-      - run: npm install -g pnpm
+        run: npm install -g pnpm@10
 
-      # skip pnpm install because no dependencies is used when develop
+      # Skipping 'pnpm install' as this project has no dependencies during development
 
       - name: Build
-      - run: pnpm build
-      
+        run: pnpm build
+
       - name: Zip the binary
         shell: bash
         run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
           mkdir extension
           cp -r ./src extension
           cp -r ./dist extension
           cp -r ./_locales extension
           cp manifest.json extension
-          zip -r extension.zip extension/
+          zip -r extension-${TAG_NAME}.zip extension/
+          echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_ENV
 
       - name: Upload Binary as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: extension
-          path: extension.zip
-
-      - name: Get the tag name
-        run: echo "TAG_NAME=$(echo ${GITHUB_REF#refs/tags/})" >> $GITHUB_ENV
+          path: extension-${{ env.TAG_NAME }}.zip
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: extension.zip
-          tag_name: ${TAG_NAME}
+          files: extension-${{ env.TAG_NAME }}.zip
+          tag_name: ${{ env.TAG_NAME }}
         env:
           GITHUB_TOKEN: ${{ secrets.BILI_WEB_EXTENSION }}
