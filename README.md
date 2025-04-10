@@ -13,7 +13,7 @@
 
 ## Download
 
-* download the zip file on the release page
+* download the zip file on the [release page](https://github.com/Wegt-meoh/bili-web-extension/releases)
 
 ## Usage
 
