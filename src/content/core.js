@@ -1,5 +1,5 @@
 import { extractHSL, extractRGB, extractRgbFromHex, hslToString, invertHslColor, invertRgbColor, isDarkColor, rgbToHexText, rgbToText } from "./color.js";
-import { CLASS_PREFIX, STYLE_SELECTOR, COLOR_KEYWORDS } from "./const.js";
+import { CLASS_PREFIX, STYLE_SELECTOR, COLOR_KEYWORDS, IGNORE_SELECTOR } from "./const.js";
 
 const rootComputedStyle = getComputedStyle(document.documentElement);
 
@@ -153,6 +153,18 @@ export async function injectDynamicTheme(element) {
             const cssStyleRule = cssRules[i];
             const cssStyleRuleStyle = cssStyleRule.style;
             const modifiedRules = [];
+
+            const selectorList = cssStyleRule.selectorText.split(",").map(item => item.trim());
+            let shouldIgnore = false;
+            for (let i = 0; i < selectorList.length; i += 1) {
+                if (IGNORE_SELECTOR.indexOf(selectorList[i]) !== -1) {
+                    shouldIgnore = true;
+                    break;
+                }
+            }
+            if (shouldIgnore) {
+                continue;
+            }
 
             for (const prop of cssStyleRuleStyle) {
                 const value = cssStyleRuleStyle.getPropertyValue(prop).trim();

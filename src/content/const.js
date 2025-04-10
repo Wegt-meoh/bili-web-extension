@@ -35,3 +35,4 @@ export const BASIC_STYLE = `
     background: rgb(24, 26, 27);
 }
 `;
+export const IGNORE_SELECTOR = [".pswp"];

@@ -7,7 +7,6 @@ const PLUGIN_KEY = "dark-bili";
 async function loadConfig() {
     const config = await browser.storage.local.get(PLUGIN_KEY);
     if (!config[PLUGIN_KEY]?.theme) {
-        console("null value");
         await browser.storage.local.set({ [PLUGIN_KEY]: { theme: "light" } });
         return "light";
     } else {
