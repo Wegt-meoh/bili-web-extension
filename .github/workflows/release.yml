@@ -18,7 +18,8 @@ jobs:
       - name: Install pnpm
         run: npm install -g pnpm@10
 
-      # Skipping 'pnpm install' as this project has no dependencies during development
+      - name: Install dependencies
+        run: pnpm install
 
       - name: Build
         run: pnpm build
