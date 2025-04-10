@@ -8,8 +8,8 @@
 
 ## Screenshots
 
-![front page](images/1.png "front page")
-![video page](images/2.png "video page")
+![front page](1.png "front page")
+![video page](2.png "video page")
 
 ## Download
 
