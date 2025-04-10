@@ -6,13 +6,11 @@ const PLUGIN_KEY = "dark-bili";
 
 async function loadConfig() {
     const config = await browser.storage.local.get(PLUGIN_KEY);
-    console.log("load config", config);
     if (!config[PLUGIN_KEY]?.theme) {
         console("null value");
         await browser.storage.local.set({ [PLUGIN_KEY]: { theme: "light" } });
         return "light";
     } else {
-        console.log("not null value");
         return config[PLUGIN_KEY].theme;
     }
 }
@@ -43,7 +41,6 @@ browser.runtime.onMessage.addListener((message, _, sendResponse) => {
     }
 
     if (message.type === "APPLY_THEME") {
-        console.log("set theme", message);
         setTabTheme(message.theme);
         saveConfig(message.theme);
         return true;

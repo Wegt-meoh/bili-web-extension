@@ -6,4 +6,4 @@ window.onload = () => {
     setupListener();
     modifyVideo();
     modifyNavigation();
-}
+};

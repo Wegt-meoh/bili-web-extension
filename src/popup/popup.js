@@ -15,13 +15,11 @@ await(async function() {
 
     // load config
     await browser.runtime.sendMessage({ type: "QUERY_THEME" }, response => {
-        console.log("popup.js response", response);
         switchCheckbox.checked = response === "light" ? false : true;
     });
 
     switchCheckbox.addEventListener('change', e => {
         const theme = e.target.checked ? 'dark' : 'light';
-        console.log("check box onchange", theme);
         setTabTheme(theme);
     });
 })();
