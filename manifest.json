@@ -20,6 +20,7 @@
     "content_scripts": [
         {
             "js": [
+                "src/content/early.js",
                 "src/content/basicStyle.js",
                 "dist/content.js"
             ],

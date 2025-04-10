@@ -26,5 +26,6 @@ async function setTheme(theme) {
 
     if (theme === "dark") {
         await injectDynamicTheme(document);
+        document.querySelector("style.dark-bili-early")?.remove();
     }
 }
