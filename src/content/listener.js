@@ -19,7 +19,14 @@ export async function setupListener() {
     }
 }
 
+let observer;
+
 async function setTheme(theme) {
+    if (observer instanceof MutationObserver) {
+        observer.disconnect();
+        observer = null;
+    }
+
     if (theme === "light") {
         document.querySelectorAll(`style.${CLASS_PREFIX}`).forEach(item => item.remove());
     }
@@ -27,5 +34,20 @@ async function setTheme(theme) {
     if (theme === "dark") {
         await injectDynamicTheme(document);
         document.querySelector("style.dark-bili-early")?.remove();
+        observer = observeRoot();
     }
+}
+
+async function observeRoot() {
+    const observer = new MutationObserver((mutationsList) => {
+        for (const mutation of mutationsList) {
+            if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
+                mutation.addedNodes.forEach(item => {
+                    injectDynamicTheme(item);
+                });
+            }
+        }
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+    return observer;
 }
