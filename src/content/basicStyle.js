@@ -1,20 +1,15 @@
 function injectBasicStyle() {
     // css style to hide wide picture
     const styleEle = document.createElement('style');
-    styleEle.classList.add("dark-bili-basic");
 
     // normal
     styleEle.textContent = `
-    .desktop-download-tip{
-        display: none
+    .desktop-download-tip, .palette-button-outer, .floor-single-card, .ad-report, .bg, .bgc{
+        display: none;
     }
 
-    .palette-button-outer,.floor-single-card{
-        display: none
-    }
-
-    .ad-report{
-        display:none;
+    .dark-bili, .dark-bili body{
+        background: #fff;
     }
     `;
 
