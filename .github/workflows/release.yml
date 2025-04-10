@@ -1,0 +1,52 @@
+name: Auto Build & Release Rust Binary (latest)
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup NodeJs
+      - uses: actions/setup-node@v4
+
+      - name: Install pnpm
+      - run: npm install -g pnpm
+
+      # skip pnpm install because no dependencies is used when develop
+
+      - name: Build
+      - run: pnpm build
+      
+      - name: Zip the binary
+        shell: bash
+        run: |
+          mkdir extension
+          cp -r ./* extension
+          zip -r extension.zip extension/
+
+      - name: Upload Binary as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension
+          path: extension.zip
+
+      - name: Get the tag name
+        run: echo "TAG_NAME=$(echo ${GITHUB_REF#refs/tags/})" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: extension.zip
+          tag_name: ${TAG_NAME}
+        env:
+          GITHUB_TOKEN: ${{ secrets.BILI_WEB_EXTENSION }}
