@@ -1,5 +1,3 @@
-name: Auto Build & Release Rust Binary (latest)
-
 on:
   push:
     tags:
