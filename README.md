@@ -4,6 +4,16 @@
 
 * open links in self tab -->(except search)
 * The step value of the volume change becomes 5% -->(except 100%->90% and 0->10%)
+* dark theme
+
+## Screenshots
+
+![front page](images/1.png "front page")
+![video page](images/2.png "video page")
+
+## Download
+
+* download the zip file on the release page
 
 ## Usage
 
@@ -11,7 +21,7 @@
 
 1. enter this site `about:debugging#/runtime/this-firefox`
 1. click `Load Temporary Add-on...`
-1. choose the `manifest.json`
+1. choose the file `manifest.json` which under the project root directory
 
 ### chrome
 
@@ -23,7 +33,3 @@
 ### safari
 
 no support now
-
-## Help me
-
-why this plugin can only be installed in debugging?
