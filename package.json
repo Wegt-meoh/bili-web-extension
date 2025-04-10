@@ -1,7 +1,7 @@
 {
     "name": "bili-web-extension",
     "version": "1.0.0",
-    "description": "",
+    "description": "A web extension for www.bilibili.com",
     "type": "module",
     "main": "index.js",
     "scripts": {
@@ -10,8 +10,12 @@
         "fix": "eslint --fix",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
-    "keywords": [],
-    "author": "",
+    "keywords": [
+        "dark",
+        "theme",
+        "bilibili"
+    ],
+    "author": "wegt-meoh wegt-meoh@outlook.com",
     "license": "ISC",
     "packageManager": "pnpm@10.6.4",
     "devDependencies": {
