@@ -29,9 +29,11 @@ async function setTheme(theme) {
 
     if (theme === "light") {
         document.querySelectorAll(`style.${CLASS_PREFIX}`).forEach(item => item.remove());
+        document.documentElement.classList.remove(CLASS_PREFIX);
     }
 
     if (theme === "dark") {
+        document.documentElement.classList.add(CLASS_PREFIX);
         await injectDynamicTheme(document);
         document.querySelector("style.dark-bili-early")?.remove();
         observer = observeRoot();

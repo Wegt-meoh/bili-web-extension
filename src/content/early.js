@@ -15,9 +15,6 @@ async function injectEarlyStyle() {
 
     // normal
     styleEle.textContent = `
-   .dark-bili, .dark-bili body{
-        background: rgb(24,26,27);
-    }
 .dark-bili:root{
     --Ga0: #1f2224;
     --Ga0_s: #1f2224;

@@ -8,8 +8,8 @@ function injectBasicStyle() {
         display: none;
     }
 
-    .dark-bili, .dark-bili body{
-        background: #fff;
+    .dark-bili body{
+        background: rgb(24, 26, 27);
     }
     `;
 
