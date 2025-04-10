@@ -31,7 +31,10 @@ jobs:
         shell: bash
         run: |
           mkdir extension
-          cp -r ./* extension
+          cp -r ./src extension
+          cp -r ./dist extension
+          cp -r ./_locales extension
+          cp manifest.json extension
           zip -r extension.zip extension/
 
       - name: Upload Binary as Artifact
