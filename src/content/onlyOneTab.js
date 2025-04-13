@@ -1,6 +1,9 @@
 export function modifyNavigation() {
     // Block new tab attempts
     document.addEventListener('click', function(e) {
+        if (e.ctrlKey || e.metaKey) {
+            return;
+        }
         const link = e.target.closest('a');
         if (!link) return;
 
