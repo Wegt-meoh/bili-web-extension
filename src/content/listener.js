@@ -1,12 +1,14 @@
 import { CLASS_PREFIX } from "../content/const";
 import { injectDynamicTheme } from "../content/core";
 
-export async function setupListener() {
-    if (typeof browser === 'undefined') {
-        // eslint-disable-next-line
-        var browser = chrome;
-    }
+if (typeof browser === 'undefined') {
+    // eslint-disable-next-line
+    var browser = chrome;
+}
 
+let observer;
+
+export async function setupListener() {
     browser.runtime.onMessage.addListener((request) => {
         setTheme(request.theme);
     });
@@ -19,8 +21,6 @@ export async function setupListener() {
     }
 }
 
-let observer;
-
 async function setTheme(theme) {
     if (observer instanceof MutationObserver) {
         observer.disconnect();
@@ -28,7 +28,6 @@ async function setTheme(theme) {
     }
 
     if (theme === "light") {
-        document.querySelectorAll(`style.${CLASS_PREFIX}`).forEach(item => item.remove());
         document.documentElement.classList.remove(CLASS_PREFIX);
     }
 
@@ -50,6 +49,6 @@ async function observeRoot() {
             }
         }
     });
-    observer.observe(document.documentElement, { childList: true, subtree: true });
+    observer.observe(document.documentElement, { childList: true, subtree: false });
     return observer;
 }

@@ -121,8 +121,76 @@ function invertColor(prop, color) {
     }
 };
 
-export async function injectDynamicTheme(element) {
-    const originalStyleElemList = await Promise.all(getStyles(element).map(async (s) => {
+function generateModifiedRules(originalStyleElement) {
+    if (!originalStyleElement.sheet) {
+        return null;
+    }
+
+    const { cssRules } = originalStyleElement.sheet;
+    const modifiedCssRules = [];
+    for (let i = 0; i < cssRules.length; i += 1) {
+        if (!(cssRules[i] instanceof CSSStyleRule)) {
+            continue;
+        }
+
+        const cssStyleRule = cssRules[i];
+        const cssStyleRuleStyle = cssStyleRule.style;
+        const modifiedRules = [];
+
+        const selectorList = cssStyleRule.selectorText.split(",").map(item => item.trim());
+        let shouldIgnore = false;
+        for (let i = 0; i < selectorList.length; i += 1) {
+            if (IGNORE_SELECTOR.indexOf(selectorList[i]) !== -1) {
+                shouldIgnore = true;
+                break;
+            }
+        }
+        if (shouldIgnore) {
+            continue;
+        }
+
+        for (const prop of cssStyleRuleStyle) {
+            const value = cssStyleRuleStyle.getPropertyValue(prop).trim();
+            const newValue = value.replaceAll(/(rgba?\([^)]+\)|hsla?\([^)]+\)|#[0-9a-f]{3,8}|var\(--[^)]+\)|\b[a-z-]+\b)/gi,
+                color => invertColor(prop, color)
+            );
+
+            if (value === newValue) {
+                continue;
+            }
+
+            modifiedRules.push({ prop, newValue });
+        }
+
+        if (modifiedRules.length > 0) {
+            modifiedCssRules.push({ selectText: cssStyleRule.selectorText, rules: modifiedRules });
+        }
+    }
+
+    return modifiedCssRules;
+}
+
+function generateStyleElement(modifiedCssRules) {
+    const injectedStyleElem = document.createElement("style");
+    injectedStyleElem.classList.add(CLASS_PREFIX);
+    injectedStyleElem.type = "text/css";
+    let textContent = "";
+
+    modifiedCssRules.forEach(cssRule => {
+        textContent += cssRule.selectText + "{\n";
+        cssRule.rules.forEach(rule => {
+            const { prop, newValue } = rule;
+            textContent += `${prop}: ${newValue};\n`;
+        });
+        textContent += "}\n";
+    });
+    injectedStyleElem.textContent = textContent;
+
+    return injectedStyleElem;
+}
+
+async function getOriginalStyleElement(element) {
+    const result = await Promise.all(getStyles(element).map(async (s) => {
         let styleTextContent = "";
         const injectStyleElem = document.createElement("style");
         injectStyleElem.classList.add(CLASS_PREFIX);
@@ -136,77 +204,22 @@ export async function injectDynamicTheme(element) {
         return injectStyleElem;
     }));
 
+    return result.filter(item => item);
+}
+
+export async function injectDynamicTheme(element) {
+    const originalStyleElemList = await getOriginalStyleElement(element);
+
     document.head.append(...originalStyleElemList);
 
     const injectedStyleElemList = originalStyleElemList.map(style => {
-        if (!style.sheet) {
-            return null;
+        const modifiedCssRules = generateModifiedRules(style);
+        if (modifiedCssRules && modifiedCssRules.length > 0) {
+            return generateStyleElement(modifiedCssRules);
         }
-
-        const { cssRules } = style.sheet;
-        const modifiedCssRules = [];
-        for (let i = 0; i < cssRules.length; i += 1) {
-            if (!(cssRules[i] instanceof CSSStyleRule)) {
-                continue;
-            }
-
-            const cssStyleRule = cssRules[i];
-            const cssStyleRuleStyle = cssStyleRule.style;
-            const modifiedRules = [];
-
-            const selectorList = cssStyleRule.selectorText.split(",").map(item => item.trim());
-            let shouldIgnore = false;
-            for (let i = 0; i < selectorList.length; i += 1) {
-                if (IGNORE_SELECTOR.indexOf(selectorList[i]) !== -1) {
-                    shouldIgnore = true;
-                    break;
-                }
-            }
-            if (shouldIgnore) {
-                continue;
-            }
-
-            for (const prop of cssStyleRuleStyle) {
-                const value = cssStyleRuleStyle.getPropertyValue(prop).trim();
-                const newValue = value.replaceAll(/(rgba?\([^)]+\)|hsla?\([^)]+\)|#[0-9a-f]{3,8}|var\(--[^)]+\)|\b[a-z-]+\b)/gi,
-                    color => invertColor(prop, color)
-                );
-
-                if (value === newValue) {
-                    continue;
-                }
-
-                modifiedRules.push({ prop, newValue });
-            }
-
-            if (modifiedRules.length > 0) {
-                modifiedCssRules.push({ selectText: cssStyleRule.selectorText, rules: modifiedRules });
-            }
-        }
-
-        style.remove();
-
-        if (modifiedCssRules.length > 0) {
-            const injectedStyleElem = document.createElement("style");
-            injectedStyleElem.classList.add(CLASS_PREFIX);
-            injectedStyleElem.type = "text/css";
-            let textContent = "";
-
-            modifiedCssRules.forEach(cssRule => {
-                textContent += cssRule.selectText + "{\n";
-                cssRule.rules.forEach(rule => {
-                    const { prop, newValue } = rule;
-                    textContent += `${prop}: ${newValue};\n`;
-                });
-                textContent += "}\n";
-            });
-            injectedStyleElem.textContent = textContent;
-
-            return injectedStyleElem;
-        }
-
         return null;
     }).filter(item => item);
 
+    originalStyleElemList.forEach(item => item.remove());
     document.body.append(...injectedStyleElemList);
 }
