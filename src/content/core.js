@@ -18,7 +18,7 @@ function isFontsGoogleApiStyle(element) {
 }
 
 function shouldManageStyle(element) {
-    if (!(element instanceof HTMLElement)) {
+    if (!isInstanceOf(element, HTMLElement)) {
         return false;
     }
 
@@ -42,7 +42,7 @@ function shouldManageStyle(element) {
 }
 
 function getStyles(element, result = []) {
-    if (!(element instanceof Element || element instanceof Document)) {
+    if (!isInstanceOf(element, Element) && !isInstanceOf(element, Document)) {
         return result;
     }
 
@@ -68,7 +68,7 @@ function isOtherColor(color) {
     if (typeof color !== "string") {
         throw new TypeError("color should be string");
     }
-    return /^(rgba?\(|hsla?\(|#|var\()/i.test(color);
+    return /^(rgba?\(|hsla?\(|#)/i.test(color);
 
 }
 
@@ -76,12 +76,26 @@ function isOtherColorCssVar(variable) {
     return isOtherColor(rootComputedStyle.getPropertyValue(variable).trim());
 }
 
+function getCssPropType(prop) {
+    return /^background|^(?!--).*-shadow$/i.test(prop) ? "bg" : /^border|^outline|^column-rule|^stroke$/i.test(prop) ? "border" : /^(color|text-decoration-color|caret-color|fill)$/i.test(prop) ? "text" : "";
+}
+
+function extractCssVarName(text) {
+    const matchResult = text.match(/var\((--[a-zA-Z0-9_-]+)(?:\s*,\s*(.*?))?\)/i);
+    if (!matchResult) {
+        return null;
+    }
+    // eslint-disable-next-line no-unused-vars
+    const [_, varName, fallback] = matchResult;
+    return { varName, fallback };
+}
+
 function invertColor(prop, color) {
     if (typeof color !== "string") {
         return color;
     }
 
-    if (isKeyWordColor(color) || !isOtherColor(color)) {
+    if (isKeyWordColor(color)) {
         return color;
     }
 
@@ -104,32 +118,43 @@ function invertColor(prop, color) {
         }
         return hslToString(...invertHslColor(h, s, l, a));
     } else if (color.startsWith("var")) {
-        const matchResult = color.match(/var\((--[a-z\d-]+)[, ]*([a-z\d#]+)?\)$/i);
+        const matchResult = extractCssVarName(color);
         if (!matchResult) {
             return color;
         }
-        // eslint-disable-next-line no-unused-vars
-        const [_, varName, fallback] = matchResult;
 
-        if (!isOtherColorCssVar(varName)) {
+        const { varName, fallback } = matchResult;
+
+        const varValue = rootComputedStyle.getPropertyValue(varName).trim();
+        if (!isOtherColor(varValue)) {
             return color;
         }
 
-        return ` var(${varName}${fallback ? `, ${invertColor(prop, fallback)}` : ""})`;
+        const propType = getCssPropType(prop);
+        if (propType === "") {
+            return color;
+        }
+
+        const newVarName = `--${CLASS_PREFIX}-${propType}${varName}`;
+        return ` var(${newVarName}${fallback ? `, ${invertColor(prop, fallback)}` : ""})`;
     } else {
         return color;
     }
 };
 
-function generateModifiedRules(originalStyleElement) {
+function generateModifiedRules(originalStyleElement, varSet) {
     if (!originalStyleElement.sheet) {
         return null;
+    }
+
+    if (!isInstanceOf(varSet, Set)) {
+        throw new TypeError("varSet is not a Set");
     }
 
     const { cssRules } = originalStyleElement.sheet;
     const modifiedCssRules = [];
     for (let i = 0; i < cssRules.length; i += 1) {
-        if (!(cssRules[i] instanceof CSSStyleRule)) {
+        if (!isInstanceOf(cssRules[i], CSSStyleRule)) {
             continue;
         }
 
@@ -151,14 +176,30 @@ function generateModifiedRules(originalStyleElement) {
 
         for (const prop of cssStyleRuleStyle) {
             const value = cssStyleRuleStyle.getPropertyValue(prop).trim();
-            const newValue = value.replaceAll(/(rgba?\([^)]+\)|hsla?\([^)]+\)|#[0-9a-f]{3,8}|var\(--[^)]+\)|\b[a-z-]+\b)/gi,
-                color => invertColor(prop, color)
-            );
 
-            if (value === newValue) {
+            // handle the definition of css variable
+            if (/^--[^-]/i.test(prop) && isOtherColorCssVar(prop)) {
+                if (varSet.has(prop)) {
+                    continue;
+                } else {
+                    varSet.add(prop);
+                }
+
+                const propTypeList = ["bg", "border", "text"];
+                const relatedProp = ["background", "border", "color"];
+                propTypeList.forEach((propType, index) => {
+                    const newPropName = `--${CLASS_PREFIX}-${propType}${prop}`;
+                    modifiedRules.push({ prop: newPropName, newValue: invertColor(relatedProp[index], value) });
+                });
+
                 continue;
             }
 
+            // handle the reference of css variable
+            const newValue = value.replaceAll(/(rgba?\([^)]+\)|hsla?\([^)]+\)|#[0-9a-f]{3,8}|var\(--[^)]+\)|\b[a-z-]+\b)/gi, color => invertColor(prop, color));
+            if (value === newValue) {
+                continue;
+            }
             modifiedRules.push({ prop, newValue });
         }
 
@@ -177,7 +218,12 @@ function generateStyleElement(modifiedCssRules) {
     let textContent = "";
 
     modifiedCssRules.forEach(cssRule => {
-        textContent += cssRule.selectText + "{\n";
+        textContent += cssRule.selectText.split(",").map(item => {
+            if (item.trim() === ":root") {
+                return `:root.${CLASS_PREFIX}`;
+            }
+            return `.${CLASS_PREFIX} ${item}`;
+        }).join(",") + "{\n";
         cssRule.rules.forEach(rule => {
             const { prop, newValue } = rule;
             textContent += `${prop}: ${newValue};\n`;
@@ -189,11 +235,32 @@ function generateStyleElement(modifiedCssRules) {
     return injectedStyleElem;
 }
 
+function isInstanceOf(child, father) {
+    return child instanceof father;
+}
+
+function getCssRules(style) {
+    try {
+        const rules = style.sheet?.cssRules;
+        if (rules) {
+            return rules;
+        }
+        return null;
+    } catch {
+        return null;
+    }
+}
+
 async function getOriginalStyleElement(element) {
     const result = await Promise.all(getStyles(element).map(async (s) => {
+        const rules = getCssRules(s);
+        if (rules !== null) {
+            return s;
+        }
+
         let styleTextContent = "";
         const injectStyleElem = document.createElement("style");
-        injectStyleElem.classList.add(CLASS_PREFIX);
+        injectStyleElem.classList.add(`${CLASS_PREFIX}-cors`);
         if (typeof s.textContent !== "string" || s.textContent.length === 0) {
             const resp = await fetch(s.href);
             styleTextContent = await resp.text();
@@ -201,25 +268,31 @@ async function getOriginalStyleElement(element) {
             styleTextContent = s.textContent;
         }
         injectStyleElem.textContent = styleTextContent;
+
+        s.insertAdjacentElement('afterend', injectStyleElem);
         return injectStyleElem;
     }));
 
     return result.filter(item => item);
 }
 
-export async function injectDynamicTheme(element) {
+export async function injectDynamicTheme(element, varSet) {
     const originalStyleElemList = await getOriginalStyleElement(element);
-
-    document.head.append(...originalStyleElemList);
-
     const injectedStyleElemList = originalStyleElemList.map(style => {
-        const modifiedCssRules = generateModifiedRules(style);
+        const modifiedCssRules = generateModifiedRules(style, varSet);
         if (modifiedCssRules && modifiedCssRules.length > 0) {
             return generateStyleElement(modifiedCssRules);
         }
         return null;
-    }).filter(item => item);
+    });
 
-    originalStyleElemList.forEach(item => item.remove());
-    document.body.append(...injectedStyleElemList);
+    originalStyleElemList.forEach((item, index) => {
+        const injectedStyleElem = injectedStyleElemList[index];
+        if (injectedStyleElem) {
+            item.insertAdjacentElement('afterend', injectedStyleElemList[index]);
+        }
+        if (item.classList.contains(`${CLASS_PREFIX}-cors`)) {
+            item.remove();
+        }
+    });
 }

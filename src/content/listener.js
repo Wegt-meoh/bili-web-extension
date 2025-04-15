@@ -7,6 +7,7 @@ if (typeof browser === 'undefined') {
 }
 
 let observer;
+const varSet = new Set();
 
 export async function setupListener() {
     browser.runtime.onMessage.addListener((request) => {
@@ -33,7 +34,7 @@ async function setTheme(theme) {
 
     if (theme === "dark") {
         document.documentElement.classList.add(CLASS_PREFIX);
-        await injectDynamicTheme(document);
+        await injectDynamicTheme(document, varSet);
         document.querySelector("style.dark-bili-early")?.remove();
         observer = observeRoot();
     }
@@ -44,7 +45,7 @@ async function observeRoot() {
         for (const mutation of mutationsList) {
             if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
                 mutation.addedNodes.forEach(item => {
-                    injectDynamicTheme(item);
+                    injectDynamicTheme(item, varSet);
                 });
             }
         }
