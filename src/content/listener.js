@@ -50,6 +50,6 @@ async function observeRoot() {
             }
         }
     });
-    observer.observe(document.documentElement, { childList: true, subtree: false });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
     return observer;
 }

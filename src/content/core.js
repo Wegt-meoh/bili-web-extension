@@ -1,5 +1,5 @@
 import { extractHSL, extractRGB, extractRgbFromHex, hslToString, invertHslColor, invertRgbColor, isDarkColor, rgbToHexText, rgbToText } from "./color.js";
-import { CLASS_PREFIX, STYLE_SELECTOR, COLOR_KEYWORDS, IGNORE_SELECTOR } from "./const.js";
+import { CLASS_PREFIX, COLOR_KEYWORDS, IGNORE_SELECTOR } from "./const.js";
 
 const rootComputedStyle = getComputedStyle(document.documentElement);
 
@@ -49,9 +49,13 @@ function getStyles(element, result = []) {
     if (shouldManageStyle(element)) {
         result.push(element);
     } else {
-        element.querySelectorAll(STYLE_SELECTOR).forEach(item => {
-            getStyles(item, result);
-        });
+        const children = element.shadowRoot ? element.shadowRoot.children : element.children;
+        if (element.shadowRoot) {
+            console.log(element);
+        }
+        for (const child of children) {
+            getStyles(child, result);
+        }
     }
 
     return result;
@@ -124,7 +128,6 @@ function invertColor(prop, color) {
         }
 
         const { varName, fallback } = matchResult;
-
         const varValue = rootComputedStyle.getPropertyValue(varName).trim();
         if (!isOtherColor(varValue)) {
             return color;
@@ -136,7 +139,7 @@ function invertColor(prop, color) {
         }
 
         const newVarName = `--${CLASS_PREFIX}-${propType}${varName}`;
-        return ` var(${newVarName}${fallback ? `, ${invertColor(prop, fallback)}` : ""})`;
+        return `var(${newVarName}${fallback ? `, ${invertColor(prop, fallback)}` : ""})`;
     } else {
         return color;
     }
@@ -175,7 +178,16 @@ function generateModifiedRules(originalStyleElement, varSet) {
         }
 
         for (const prop of cssStyleRuleStyle) {
-            const value = cssStyleRuleStyle.getPropertyValue(prop).trim();
+            let value = cssStyleRuleStyle.getPropertyValue(prop).trim();
+            if (value === "") {
+                if (/^background-.*/i.test(prop)) {
+                    value = cssStyleRuleStyle.getPropertyValue("background");
+                } else if (/^border-.*/i.test(prop)) {
+                    value = cssStyleRuleStyle.getPropertyValue("border");
+                } else {
+                    continue;
+                }
+            }
 
             // handle the definition of css variable
             if (/^--[^-]/i.test(prop) && isOtherColorCssVar(prop)) {
