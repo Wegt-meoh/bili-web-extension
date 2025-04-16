@@ -41,24 +41,37 @@ function shouldManageStyle(element) {
         !element.classList.contains("stylus");
 }
 
-function getStyles(element, result = []) {
-    if (!isInstanceOf(element, Element) && !isInstanceOf(element, Document)) {
+function getStyles(element, result = [], varSet) {
+    if (!isInstanceOf(element, Element) && !isInstanceOf(element, Document) && !isInstanceOf(element, ShadowRoot)) {
         return result;
     }
 
     if (shouldManageStyle(element)) {
         result.push(element);
+    } else if (element.shadowRoot) {
+        injectDynamicTheme(element.shadowRoot, varSet);
+        observeTarget(element.shadowRoot, varSet);
     } else {
-        const children = element.shadowRoot ? element.shadowRoot.children : element.children;
-        if (element.shadowRoot) {
-            console.log(element);
-        }
-        for (const child of children) {
-            getStyles(child, result);
+        for (const child of element.children) {
+            getStyles(child, result, varSet);
         }
     }
 
     return result;
+}
+
+function observeTarget(target, varSet) {
+    const observer = new MutationObserver((mutationsList) => {
+        for (const mutation of mutationsList) {
+            if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
+                mutation.addedNodes.forEach(item => {
+                    injectDynamicTheme(item, varSet);
+                });
+            }
+        }
+    });
+    observer.observe(target, { childList: true, subtree: true });
+    return observer;
 }
 
 function isKeyWordColor(color) {
@@ -85,13 +98,16 @@ function getCssPropType(prop) {
 }
 
 function extractCssVarName(text) {
-    const matchResult = text.match(/var\((--[a-zA-Z0-9_-]+)(?:\s*,\s*(.*?))?\)/i);
-    if (!matchResult) {
-        return null;
+    if (typeof text !== "string") {
+        throw new TypeError("text must be string but got ", typeof text);
     }
-    // eslint-disable-next-line no-unused-vars
-    const [_, varName, fallback] = matchResult;
-    return { varName, fallback };
+
+    const newText = text.slice(4, text.length - 1).trim();
+    const index = newText.indexOf(",");
+    if (index === -1) {
+        return { varName: newText, fallback: undefined };
+    }
+    return { varName: newText.slice(0, index).trim(), fallback: newText.slice(index + 1).trim() };
 }
 
 function invertColor(prop, color) {
@@ -128,11 +144,6 @@ function invertColor(prop, color) {
         }
 
         const { varName, fallback } = matchResult;
-        const varValue = rootComputedStyle.getPropertyValue(varName).trim();
-        if (!isOtherColor(varValue)) {
-            return color;
-        }
-
         const propType = getCssPropType(prop);
         if (propType === "") {
             return color;
@@ -179,6 +190,7 @@ function generateModifiedRules(originalStyleElement, varSet) {
 
         for (const prop of cssStyleRuleStyle) {
             let value = cssStyleRuleStyle.getPropertyValue(prop).trim();
+
             if (value === "") {
                 if (/^background-.*/i.test(prop)) {
                     value = cssStyleRuleStyle.getPropertyValue("background");
@@ -208,7 +220,7 @@ function generateModifiedRules(originalStyleElement, varSet) {
             }
 
             // handle the reference of css variable
-            const newValue = value.replaceAll(/(rgba?\([^)]+\)|hsla?\([^)]+\)|#[0-9a-f]{3,8}|var\(--[^)]+\)|\b[a-z-]+\b)/gi, color => invertColor(prop, color));
+            const newValue = value.replaceAll(/(rgba?\([^)]+\)|hsla?\([^)]+\)|#[0-9a-f]{3,8}|var\(.*\)|\b[a-z-]+\b)/gi, color => invertColor(prop, color));
             if (value === newValue) {
                 continue;
             }
@@ -216,7 +228,7 @@ function generateModifiedRules(originalStyleElement, varSet) {
         }
 
         if (modifiedRules.length > 0) {
-            modifiedCssRules.push({ selectText: cssStyleRule.selectorText, rules: modifiedRules });
+            modifiedCssRules.push({ selectorText: cssStyleRule.selectorText, rules: modifiedRules });
         }
     }
 
@@ -230,12 +242,7 @@ function generateStyleElement(modifiedCssRules) {
     let textContent = "";
 
     modifiedCssRules.forEach(cssRule => {
-        textContent += cssRule.selectText.split(",").map(item => {
-            if (item.trim() === ":root") {
-                return `:root.${CLASS_PREFIX}`;
-            }
-            return `.${CLASS_PREFIX} ${item}`;
-        }).join(",") + "{\n";
+        textContent += cssRule.selectorText + "{\n";
         cssRule.rules.forEach(rule => {
             const { prop, newValue } = rule;
             textContent += `${prop}: ${newValue};\n`;
@@ -263,8 +270,8 @@ function getCssRules(style) {
     }
 }
 
-async function getOriginalStyleElement(element) {
-    const result = await Promise.all(getStyles(element).map(async (s) => {
+async function getOriginalStyleElement(element, varSet) {
+    const result = await Promise.all(getStyles(element, [], varSet).map(async (s) => {
         const rules = getCssRules(s);
         if (rules !== null) {
             return s;
@@ -289,7 +296,11 @@ async function getOriginalStyleElement(element) {
 }
 
 export async function injectDynamicTheme(element, varSet) {
-    const originalStyleElemList = await getOriginalStyleElement(element);
+    const originalStyleElemList = await getOriginalStyleElement(element, varSet);
+    if (originalStyleElemList.length === 0) {
+        return;
+    }
+
     const injectedStyleElemList = originalStyleElemList.map(style => {
         const modifiedCssRules = generateModifiedRules(style, varSet);
         if (modifiedCssRules && modifiedCssRules.length > 0) {
