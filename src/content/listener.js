@@ -7,49 +7,43 @@ if (typeof browser === 'undefined') {
 }
 
 let observer;
-const varSet = new Set();
 
-export async function setupListener() {
+export async function setupListener(target) {
     browser.runtime.onMessage.addListener((request) => {
-        setTheme(request.theme);
+        setTheme(request.theme, target);
     });
 
     try {
         const theme = await browser.runtime.sendMessage({ type: "QUERY_THEME" });
-        await setTheme(theme);
+        await setTheme(theme, target);
     } catch (err) {
         console.error(err);
     }
 }
 
-async function setTheme(theme) {
+async function setTheme(theme, target) {
     if (observer instanceof MutationObserver) {
         observer.disconnect();
         observer = null;
     }
 
-    if (theme === "light") {
-        document.documentElement.classList.remove(CLASS_PREFIX);
-    }
-
     if (theme === "dark") {
-        document.documentElement.classList.add(CLASS_PREFIX);
-        await injectDynamicTheme(document, varSet);
-        document.querySelector("style.dark-bili-early")?.remove();
-        observer = observeRoot();
+        await injectDynamicTheme(target);
+        target.querySelector("style.dark-bili-early")?.remove();
+        observer = observeTarget(target);
     }
 }
 
-async function observeRoot() {
+async function observeTarget(target) {
     const observer = new MutationObserver((mutationsList) => {
         for (const mutation of mutationsList) {
             if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
                 mutation.addedNodes.forEach(item => {
-                    injectDynamicTheme(item, varSet);
+                    injectDynamicTheme(item);
                 });
             }
         }
     });
-    observer.observe(document.documentElement, { childList: true, subtree: true });
+    observer.observe(target, { childList: true, subtree: true });
     return observer;
 }

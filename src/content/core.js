@@ -1,7 +1,6 @@
 import { extractHSL, extractRGB, extractRgbFromHex, hslToString, invertHslColor, invertRgbColor, isDarkColor, rgbToHexText, rgbToText } from "./color.js";
 import { CLASS_PREFIX, COLOR_KEYWORDS, IGNORE_SELECTOR } from "./const.js";
-
-const rootComputedStyle = getComputedStyle(document.documentElement);
+import { setupListener } from "./listener.js";
 
 function isFontsGoogleApiStyle(element) {
     if (typeof element.href !== "string") {
@@ -41,7 +40,7 @@ function shouldManageStyle(element) {
         !element.classList.contains("stylus");
 }
 
-function getStyles(element, result = [], varSet) {
+function getStyles(element, result = []) {
     if (!isInstanceOf(element, Element) && !isInstanceOf(element, Document) && !isInstanceOf(element, ShadowRoot)) {
         return result;
     }
@@ -49,29 +48,14 @@ function getStyles(element, result = [], varSet) {
     if (shouldManageStyle(element)) {
         result.push(element);
     } else if (element.shadowRoot) {
-        injectDynamicTheme(element.shadowRoot, varSet);
-        observeTarget(element.shadowRoot, varSet);
+        setupListener(element.shadowRoot);
     } else {
         for (const child of element.children) {
-            getStyles(child, result, varSet);
+            getStyles(child, result);
         }
     }
 
     return result;
-}
-
-function observeTarget(target, varSet) {
-    const observer = new MutationObserver((mutationsList) => {
-        for (const mutation of mutationsList) {
-            if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
-                mutation.addedNodes.forEach(item => {
-                    injectDynamicTheme(item, varSet);
-                });
-            }
-        }
-    });
-    observer.observe(target, { childList: true, subtree: true });
-    return observer;
 }
 
 function isKeyWordColor(color) {
@@ -89,7 +73,7 @@ function isOtherColor(color) {
 
 }
 
-function isOtherColorCssVar(variable) {
+function isOtherColorCssVar(variable, rootComputedStyle) {
     return isOtherColor(rootComputedStyle.getPropertyValue(variable).trim());
 }
 
@@ -156,13 +140,9 @@ function invertColor(prop, color) {
     }
 };
 
-function generateModifiedRules(originalStyleElement, varSet) {
+function generateModifiedRules(originalStyleElement, rootComputedStyle) {
     if (!originalStyleElement.sheet) {
         return null;
-    }
-
-    if (!isInstanceOf(varSet, Set)) {
-        throw new TypeError("varSet is not a Set");
     }
 
     const { cssRules } = originalStyleElement.sheet;
@@ -202,13 +182,7 @@ function generateModifiedRules(originalStyleElement, varSet) {
             }
 
             // handle the definition of css variable
-            if (/^--[^-]/i.test(prop) && isOtherColorCssVar(prop)) {
-                if (varSet.has(prop)) {
-                    continue;
-                } else {
-                    varSet.add(prop);
-                }
-
+            if (/^--[a-z\d-]+/i.test(prop) && isOtherColorCssVar(prop, rootComputedStyle)) {
                 const propTypeList = ["bg", "border", "text"];
                 const relatedProp = ["background", "border", "color"];
                 propTypeList.forEach((propType, index) => {
@@ -270,8 +244,8 @@ function getCssRules(style) {
     }
 }
 
-async function getOriginalStyleElement(element, varSet) {
-    const result = await Promise.all(getStyles(element, [], varSet).map(async (s) => {
+async function getOriginalStyleElement(element) {
+    const result = await Promise.all(getStyles(element, []).map(async (s) => {
         const rules = getCssRules(s);
         if (rules !== null) {
             return s;
@@ -295,14 +269,18 @@ async function getOriginalStyleElement(element, varSet) {
     return result.filter(item => item);
 }
 
-export async function injectDynamicTheme(element, varSet) {
-    const originalStyleElemList = await getOriginalStyleElement(element, varSet);
+export async function injectDynamicTheme(element) {
+    if (!isInstanceOf(element, Element)) {
+        return;
+    }
+    const originalStyleElemList = await getOriginalStyleElement(element);
     if (originalStyleElemList.length === 0) {
         return;
     }
 
+    const rootComputedStyle = getComputedStyle(element);
     const injectedStyleElemList = originalStyleElemList.map(style => {
-        const modifiedCssRules = generateModifiedRules(style, varSet);
+        const modifiedCssRules = generateModifiedRules(style, rootComputedStyle);
         if (modifiedCssRules && modifiedCssRules.length > 0) {
             return generateStyleElement(modifiedCssRules);
         }

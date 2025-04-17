@@ -6,7 +6,7 @@ import { modifyVideo } from "./video";
 injectBasicStyle();
 
 window.onload = () => {
-    setupListener();
+    setupListener(document.documentElement);
     modifyVideo();
     modifyNavigation();
 };
