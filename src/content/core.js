@@ -190,6 +190,7 @@ function generateModifiedRules(originalStyleElement, rootComputedStyle) {
 
         for (const prop of cssStyleRuleStyle) {
             const value = cssStyleRuleStyle.getPropertyValue(prop).trim();
+            const priority = cssStyleRuleStyle.getPropertyPriority(prop);
 
             // handle the definition of css variable
             if (/^--[a-z\d-]+/i.test(prop) && isOtherColorCssVar(prop, rootComputedStyle)) {
@@ -203,26 +204,33 @@ function generateModifiedRules(originalStyleElement, rootComputedStyle) {
             }
 
             // handle the reference of css variable
-            const newValue = value.replaceAll(/(rgba?\([^)]+\)|hsla?\([^)]+\)|#[0-9a-f]{3,8}|var\(.*\)|\b[a-z-]+\b)/gi, color => invertColor(prop, color));
+            let newValue = value.replaceAll(/(rgba?\([^)]+\)|hsla?\([^)]+\)|#[0-9a-f]{3,8}|var\(.*\)|\b[a-z-]+\b)/gi, color => invertColor(prop, color));
             if (value === newValue) {
                 continue;
             }
 
+            if (priority === "important") {
+                newValue += "!important";
+            }
             modifiedRules.push({ prop, newValue });
         }
 
         for (const prop of SHORT_HAND_PROP) {
             const value = cssStyleRuleStyle.getPropertyValue(prop).trim();
+            const priority = cssStyleRuleStyle.getPropertyPriority(prop);
             // handle the reference of css variable
-            const newValue = value.replaceAll(/(rgba?\([^)]+\)|hsla?\([^)]+\)|#[0-9a-f]{3,8}|var\(.*\)|\b[a-z-]+\b)/gi, color => invertColor(prop, color));
+            let newValue = value.replaceAll(/(rgba?\([^)]+\)|hsla?\([^)]+\)|#[0-9a-f]{3,8}|var\(.*\)|\b[a-z-]+\b)/gi, color => invertColor(prop, color));
             if (value === newValue) {
                 continue;
+            }
+            if (priority === "important") {
+                newValue += "!important";
             }
             modifiedRules.push({ prop, newValue });
         }
 
         if (modifiedRules.length > 0) {
-            modifiedCssRules.push({ selectorText: cssStyleRule.selectorText, rules: modifiedRules });
+            modifiedCssRules.push({ selectorText: selectorText, rules: modifiedRules });
         }
     }
 
