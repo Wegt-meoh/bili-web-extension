@@ -36,3 +36,4 @@ export const BASIC_STYLE = `
 }
 `;
 export const IGNORE_SELECTOR = [".pswp"];
+export const SHORT_HAND_PROP = ["background", "border"];

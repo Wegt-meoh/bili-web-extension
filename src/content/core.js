@@ -1,6 +1,7 @@
 import { extractHSL, extractRGB, extractRgbFromHex, hslToString, invertHslColor, invertRgbColor, isDarkColor, rgbToHexText, rgbToText } from "./color.js";
-import { CLASS_PREFIX, COLOR_KEYWORDS, IGNORE_SELECTOR } from "./const.js";
-import { setupListener } from "./listener.js";
+import { CLASS_PREFIX, COLOR_KEYWORDS, IGNORE_SELECTOR, SHORT_HAND_PROP, STYLE_SELECTOR } from "./const.js";
+import { setupDomListener, setupStyleListener } from "./listener.js";
+import { isInstanceOf } from "./utils.js";
 
 function isFontsGoogleApiStyle(element) {
     if (typeof element.href !== "string") {
@@ -35,24 +36,41 @@ function shouldManageStyle(element) {
             !isFontsGoogleApiStyle(element)
         )
     ) &&
-        !element.classList.contains(CLASS_PREFIX) &&
+        !element.classList.toString().includes(CLASS_PREFIX) &&
         element.media.toLowerCase() !== "print" &&
         !element.classList.contains("stylus");
 }
 
+function traverseShadowRoot(target) {
+    if (!target || !isInstanceOf(target, Node)) {
+        throw new TypeError("target is not Node");
+    }
+
+    const walker = document.createTreeWalker(
+        target,
+        NodeFilter.SHOW_ELEMENT,
+        { acceptNode: () => NodeFilter.FILTER_ACCEPT }
+    );
+    let node;
+    while ((node = walker.nextNode())) {
+        if (node.shadowRoot) {
+            setupDomListener(node.shadowRoot);
+        }
+    }
+}
+
 function getStyles(element, result = []) {
-    if (!isInstanceOf(element, Element) && !isInstanceOf(element, Document) && !isInstanceOf(element, ShadowRoot)) {
+    if (!isInstanceOf(element, Element) && !isInstanceOf(element, ShadowRoot)) {
         return result;
     }
 
     if (shouldManageStyle(element)) {
         result.push(element);
-    } else if (element.shadowRoot) {
-        setupListener(element.shadowRoot);
     } else {
-        for (const child of element.children) {
-            getStyles(child, result);
-        }
+        element.querySelectorAll(STYLE_SELECTOR).forEach(item => {
+            result.push(item);
+        });
+        traverseShadowRoot(element);
     }
 
     return result;
@@ -154,8 +172,10 @@ function generateModifiedRules(originalStyleElement, rootComputedStyle) {
 
         const cssStyleRule = cssRules[i];
         const cssStyleRuleStyle = cssStyleRule.style;
+        const selectorText = cssStyleRule.selectorText;
         const modifiedRules = [];
 
+        // ignore this cssrule when match
         const selectorList = cssStyleRule.selectorText.split(",").map(item => item.trim());
         let shouldIgnore = false;
         for (let i = 0; i < selectorList.length; i += 1) {
@@ -169,17 +189,7 @@ function generateModifiedRules(originalStyleElement, rootComputedStyle) {
         }
 
         for (const prop of cssStyleRuleStyle) {
-            let value = cssStyleRuleStyle.getPropertyValue(prop).trim();
-
-            if (value === "") {
-                if (/^background-.*/i.test(prop)) {
-                    value = cssStyleRuleStyle.getPropertyValue("background");
-                } else if (/^border-.*/i.test(prop)) {
-                    value = cssStyleRuleStyle.getPropertyValue("border");
-                } else {
-                    continue;
-                }
-            }
+            const value = cssStyleRuleStyle.getPropertyValue(prop).trim();
 
             // handle the definition of css variable
             if (/^--[a-z\d-]+/i.test(prop) && isOtherColorCssVar(prop, rootComputedStyle)) {
@@ -189,10 +199,20 @@ function generateModifiedRules(originalStyleElement, rootComputedStyle) {
                     const newPropName = `--${CLASS_PREFIX}-${propType}${prop}`;
                     modifiedRules.push({ prop: newPropName, newValue: invertColor(relatedProp[index], value) });
                 });
-
                 continue;
             }
 
+            // handle the reference of css variable
+            const newValue = value.replaceAll(/(rgba?\([^)]+\)|hsla?\([^)]+\)|#[0-9a-f]{3,8}|var\(.*\)|\b[a-z-]+\b)/gi, color => invertColor(prop, color));
+            if (value === newValue) {
+                continue;
+            }
+
+            modifiedRules.push({ prop, newValue });
+        }
+
+        for (const prop of SHORT_HAND_PROP) {
+            const value = cssStyleRuleStyle.getPropertyValue(prop).trim();
             // handle the reference of css variable
             const newValue = value.replaceAll(/(rgba?\([^)]+\)|hsla?\([^)]+\)|#[0-9a-f]{3,8}|var\(.*\)|\b[a-z-]+\b)/gi, color => invertColor(prop, color));
             if (value === newValue) {
@@ -228,9 +248,7 @@ function generateStyleElement(modifiedCssRules) {
     return injectedStyleElem;
 }
 
-function isInstanceOf(child, father) {
-    return child instanceof father;
-}
+
 
 function getCssRules(style) {
     try {
@@ -270,7 +288,7 @@ async function getOriginalStyleElement(element) {
 }
 
 export async function injectDynamicTheme(element) {
-    if (!isInstanceOf(element, Element)) {
+    if (!isInstanceOf(element, Element) && !isInstanceOf(element, ShadowRoot)) {
         return;
     }
     const originalStyleElemList = await getOriginalStyleElement(element);
@@ -279,21 +297,32 @@ export async function injectDynamicTheme(element) {
     }
 
     const rootComputedStyle = getComputedStyle(element);
-    const injectedStyleElemList = originalStyleElemList.map(style => {
-        const modifiedCssRules = generateModifiedRules(style, rootComputedStyle);
-        if (modifiedCssRules && modifiedCssRules.length > 0) {
-            return generateStyleElement(modifiedCssRules);
-        }
-        return null;
-    });
 
-    originalStyleElemList.forEach((item, index) => {
-        const injectedStyleElem = injectedStyleElemList[index];
-        if (injectedStyleElem) {
-            item.insertAdjacentElement('afterend', injectedStyleElemList[index]);
-        }
-        if (item.classList.contains(`${CLASS_PREFIX}-cors`)) {
-            item.remove();
+    originalStyleElemList.forEach(style => {
+        handleStyleElem(style, rootComputedStyle);
+        if (style.classList.contains(`${CLASS_PREFIX}-cors`)) {
+            style.remove();
+        } else {
+            setupStyleListener(style, rootComputedStyle);
         }
     });
 }
+
+export function handleStyleElem(styleElem, rootComputedStyle) {
+    if (!isInstanceOf(styleElem, HTMLStyleElement)) {
+        throw new TypeError("styleElem must be HTMLStyleElement but got", styleElem);
+    }
+
+    if (!isInstanceOf(rootComputedStyle, CSSStyleDeclaration)) {
+        throw new TypeError("rootComputedStyle must be CSSStyleDeclaration but got", rootComputedStyle);
+    }
+
+    const modifiedCssRules = generateModifiedRules(styleElem, rootComputedStyle);
+    if (!modifiedCssRules || modifiedCssRules.length === 0) {
+        styleElem.relatedStyle = null;
+    }
+
+    const injectStyleElem = generateStyleElement(modifiedCssRules);
+    styleElem.insertAdjacentElement('afterend', injectStyleElem);
+    styleElem.relatedStyle = injectStyleElem;
+} 
