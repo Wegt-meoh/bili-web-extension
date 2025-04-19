@@ -30,10 +30,6 @@ export const BASIC_STYLE = `
 .desktop-download-tip, .palette-button-outer, .floor-single-card, .ad-report, .bg, .bgc{
     display: none;
 }
-
-.dark-bili body{
-    background: rgb(24, 26, 27);
-}
 `;
 export const IGNORE_SELECTOR = [".pswp"];
 export const SHORT_HAND_PROP = ["background", "border"];
