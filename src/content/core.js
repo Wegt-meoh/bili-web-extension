@@ -112,51 +112,65 @@ function extractCssVarName(text) {
     return { varName: newText.slice(0, index).trim(), fallback: newText.slice(index + 1).trim() };
 }
 
-function invertColor(prop, color) {
-    if (typeof color !== "string") {
+function handleRgbColor(prop, color) {
+    const [r, g, b, a] = extractRGB(color);
+    if ((isDarkColor(r, g, b) && /^background.*/i.test(prop)) || (!isDarkColor(r, g, b) && /^color/i.test(prop))) {
         return color;
     }
+    return rgbToText(...invertRgbColor(r, g, b, a));
+}
 
-    if (isKeyWordColor(color)) {
+function handleHexColor(prop, color) {
+    const [r, g, b, a] = extractRgbFromHex(color);
+    if ((isDarkColor(r, g, b) && /^background.*/i.test(prop)) || (!isDarkColor(r, g, b) && /^color/i.test(prop))) {
         return color;
     }
+    return rgbToHexText(...invertRgbColor(r, g, b, a));
+}
 
-    if (/^rgba?\([\d., ]+\)/.test(color)) {
-        const [r, g, b, a] = extractRGB(color);
-        if ((isDarkColor(r, g, b) && /^background.*/i.test(prop)) || (!isDarkColor(r, g, b) && /^color/i.test(prop))) {
-            return color;
-        }
-        return rgbToText(...invertRgbColor(r, g, b, a));
-    } else if (color.startsWith("#")) {
-        const [r, g, b, a] = extractRgbFromHex(color);
-        if ((isDarkColor(r, g, b) && /^background.*/i.test(prop)) || (!isDarkColor(r, g, b) && /^color/i.test(prop))) {
-            return color;
-        }
-        return rgbToHexText(...invertRgbColor(r, g, b, a));
-    } else if (/^hsla?\([\d, .%]+\)/.test(color)) {
-        const [h, s, l, a] = extractHSL(color);
-        if ((l < 0.5 && /background.*/.test(prop)) || (l >= 0.5 && /color/.test(prop))) {
-            return color;
-        }
-        return hslToString(...invertHslColor(h, s, l, a));
-    } else if (color.startsWith("var")) {
-        const matchResult = extractCssVarName(color);
-        if (!matchResult) {
-            return color;
-        }
-
-        const { varName, fallback } = matchResult;
-        const propType = getCssPropType(prop);
-        if (propType === "") {
-            return color;
-        }
-
-        const newVarName = `--${CLASS_PREFIX}-${propType}${varName}`;
-        return `var(${newVarName}${fallback ? `, ${invertColor(prop, fallback)}` : ""})`;
-    } else {
+function handleHslColor(prop, color) {
+    const [h, s, l, a] = extractHSL(color);
+    if ((l < 0.5 && /background.*/.test(prop)) || (l >= 0.5 && /color/.test(prop))) {
         return color;
     }
-};
+    return hslToString(...invertHslColor(h, s, l, a));
+}
+
+function addCssPrefix(propType, variable) {
+    return `--${CLASS_PREFIX}-${propType}${variable}`;
+}
+
+function handleVar(prop, variable, rootComputedStyle) {
+    if (!isOtherColorCssVar(variable, rootComputedStyle)) {
+        return variable;
+    }
+
+    const propType = getCssPropType(prop);
+
+    if (propType === "") {
+        return variable;
+    }
+
+    return addCssPrefix(propType, variable);
+}
+
+function getNewValue(prop, value, rootComputedStyle) {
+    let newValue = value.replaceAll(/\brgba?\([\d. ,]+\)/g, color => handleRgbColor(prop, color));
+    newValue = newValue.replaceAll(/\bhsla?\([\d. ,]+\)/g, color => handleHslColor(prop, color));
+    newValue = newValue.replaceAll(/#[\da-fA-F]{3,8}/g, color => handleHexColor(prop, color));
+    newValue = newValue.replaceAll(/--[\w]+[\w\d-]*/g, variable => handleVar(prop, variable, rootComputedStyle));
+    return newValue;
+}
+
+function checkShouldIgnore(selectorText) {
+    const selectorList = selectorText.split(",").map(item => item.trim());
+    for (const selector of selectorList) {
+        if (IGNORE_SELECTOR.some(item => item === selector ? true : undefined)) {
+            return true;
+        }
+    }
+    return false;
+}
 
 function generateModifiedRules(originalStyleElement, rootComputedStyle) {
     if (!originalStyleElement.sheet) {
@@ -170,59 +184,40 @@ function generateModifiedRules(originalStyleElement, rootComputedStyle) {
             continue;
         }
 
-        const cssStyleRule = cssRules[i];
-        const cssStyleRuleStyle = cssStyleRule.style;
-        const selectorText = cssStyleRule.selectorText;
+        const cssRule = cssRules[i];
+        const cssRuleStyle = cssRule.style;
+        const cssRuleStylePropList = [...Array.from(cssRule.style), ...SHORT_HAND_PROP];
+        const selectorText = cssRule.selectorText;
         const modifiedRules = [];
 
         // ignore this cssrule when match
-        const selectorList = cssStyleRule.selectorText.split(",").map(item => item.trim());
-        let shouldIgnore = false;
-        for (let i = 0; i < selectorList.length; i += 1) {
-            if (IGNORE_SELECTOR.indexOf(selectorList[i]) !== -1) {
-                shouldIgnore = true;
-                break;
-            }
-        }
-        if (shouldIgnore) {
+        if (checkShouldIgnore(selectorText)) {
             continue;
         }
 
-        for (const prop of cssStyleRuleStyle) {
-            const value = cssStyleRuleStyle.getPropertyValue(prop).trim();
-            const priority = cssStyleRuleStyle.getPropertyPriority(prop);
+        for (const prop of cssRuleStylePropList) {
+            const value = cssRuleStyle.getPropertyValue(prop).trim();
+            const priority = cssRuleStyle.getPropertyPriority(prop);
 
             // handle the definition of css variable
-            if (/^--[a-z\d-]+/i.test(prop) && isOtherColorCssVar(prop, rootComputedStyle)) {
-                const propTypeList = ["bg", "border", "text"];
+            if (/^--[\w]+[\w\d-]*/.test(prop) && isOtherColorCssVar(prop, rootComputedStyle)) {
                 const relatedProp = ["background", "border", "color"];
-                propTypeList.forEach((propType, index) => {
-                    const newPropName = `--${CLASS_PREFIX}-${propType}${prop}`;
-                    modifiedRules.push({ prop: newPropName, newValue: invertColor(relatedProp[index], value) });
+                relatedProp.forEach((cssProp) => {
+                    const newPropName = addCssPrefix(getCssPropType(cssProp), prop);
+                    const newValue = getNewValue(cssProp, value, rootComputedStyle);
+                    console.log(prop, value, cssProp, newValue);
+                    modifiedRules.push({ prop: newPropName, newValue: newValue });
                 });
                 continue;
             }
 
-            // handle the reference of css variable
-            let newValue = value.replaceAll(/(rgba?\([^)]+\)|hsla?\([^)]+\)|#[0-9a-f]{3,8}|var\(.*\)|\b[a-z-]+\b)/gi, color => invertColor(prop, color));
+            // handle the reference of css variable 
+            let newValue = getNewValue(prop, value, rootComputedStyle);
+
             if (value === newValue) {
                 continue;
             }
 
-            if (priority === "important") {
-                newValue += "!important";
-            }
-            modifiedRules.push({ prop, newValue });
-        }
-
-        for (const prop of SHORT_HAND_PROP) {
-            const value = cssStyleRuleStyle.getPropertyValue(prop).trim();
-            const priority = cssStyleRuleStyle.getPropertyPriority(prop);
-            // handle the reference of css variable
-            let newValue = value.replaceAll(/(rgba?\([^)]+\)|hsla?\([^)]+\)|#[0-9a-f]{3,8}|var\(.*\)|\b[a-z-]+\b)/gi, color => invertColor(prop, color));
-            if (value === newValue) {
-                continue;
-            }
             if (priority === "important") {
                 newValue += "!important";
             }
@@ -247,7 +242,7 @@ function generateStyleElement(modifiedCssRules) {
         textContent += cssRule.selectorText + "{\n";
         cssRule.rules.forEach(rule => {
             const { prop, newValue } = rule;
-            textContent += `${prop}: ${newValue};\n`;
+            textContent += `${prop}: ${newValue}; \n`;
         });
         textContent += "}\n";
     });
@@ -255,8 +250,6 @@ function generateStyleElement(modifiedCssRules) {
 
     return injectedStyleElem;
 }
-
-
 
 function getCssRules(style) {
     try {
@@ -308,7 +301,7 @@ export async function injectDynamicTheme(element) {
 
     originalStyleElemList.forEach(style => {
         handleStyleElem(style, rootComputedStyle);
-        if (style.classList.contains(`${CLASS_PREFIX}-cors`)) {
+        if (style.classList.contains(`${CLASS_PREFIX} -cors`)) {
             style.remove();
         } else {
             setupStyleListener(style, rootComputedStyle);
@@ -333,4 +326,4 @@ export function handleStyleElem(styleElem, rootComputedStyle) {
     const injectStyleElem = generateStyleElement(modifiedCssRules);
     styleElem.insertAdjacentElement('afterend', injectStyleElem);
     styleElem.relatedStyle = injectStyleElem;
-} 
+}
