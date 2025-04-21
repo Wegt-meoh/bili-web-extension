@@ -205,8 +205,7 @@ function generateModifiedRules(originalStyleElement, rootComputedStyle) {
                 relatedProp.forEach((cssProp) => {
                     const newPropName = addCssPrefix(getCssPropType(cssProp), prop);
                     const newValue = getNewValue(cssProp, value, rootComputedStyle);
-                    console.log(prop, value, cssProp, newValue);
-                    modifiedRules.push({ prop: newPropName, newValue: newValue });
+                    modifiedRules.push({ prop: newPropName, value: newValue });
                 });
                 continue;
             }
@@ -221,7 +220,7 @@ function generateModifiedRules(originalStyleElement, rootComputedStyle) {
             if (priority === "important") {
                 newValue += "!important";
             }
-            modifiedRules.push({ prop, newValue });
+            modifiedRules.push({ prop, value: newValue });
         }
 
         if (modifiedRules.length > 0) {
@@ -241,8 +240,8 @@ function generateStyleElement(modifiedCssRules) {
     modifiedCssRules.forEach(cssRule => {
         textContent += cssRule.selectorText + "{\n";
         cssRule.rules.forEach(rule => {
-            const { prop, newValue } = rule;
-            textContent += `${prop}: ${newValue}; \n`;
+            const { prop, value } = rule;
+            textContent += `${prop}: ${value}; \n`;
         });
         textContent += "}\n";
     });
