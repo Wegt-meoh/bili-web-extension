@@ -8,33 +8,30 @@ if (typeof browser === 'undefined') {
 }
 
 export async function setupDomListener(target) {
-    let observer = null;
+    let currentTheme;
     function handleShadowRootConstructedStyle(target) {
-        console.log("handle constructed style", target);
+        // console.log("handle constructed style", target);
     }
 
-    async function setTheme(theme, target) {
-        if (observer) {
-            observer.disconnect();
-            observer = null;
+    async function setTheme() {
+        if (currentTheme === "light") {
+            target.querySelectorAll(`.${CLASS_PREFIX}`).forEach(e => e.remove());
         }
 
-        if (theme === "light") {
-            document.querySelectorAll(CLASS_PREFIX).forEach(e => e.remove());
-        }
-
-        if (theme === "dark") {
+        if (currentTheme === "dark") {
             if (target instanceof ShadowRoot) {
                 handleShadowRootConstructedStyle(target);
             }
             await injectDynamicTheme(target);
             target.querySelector("style.dark-bili-early")?.remove();
-            observer = observeTarget(target);
         }
     }
 
     function observeTarget(target) {
         const observer = new MutationObserver((mutationsList) => {
+            if (currentTheme === "light") {
+                return;
+            }
             for (const mutation of mutationsList) {
                 if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
                     mutation.addedNodes.forEach(item => {
@@ -47,12 +44,15 @@ export async function setupDomListener(target) {
         return observer;
     }
     browser.runtime.onMessage.addListener((request) => {
-        setTheme(request.theme, target);
+        currentTheme = request.theme;
+        setTheme();
     });
 
     try {
         const theme = await browser.runtime.sendMessage({ type: "QUERY_THEME" });
-        await setTheme(theme, target);
+        currentTheme = theme;
+        await setTheme();
+        observeTarget(target);
     } catch (err) {
         console.error(err);
     }
@@ -67,30 +67,27 @@ export async function setupStyleListener(styleElement, rootComputedStyle) {
         throw new TypeError("rootComputedStyle must be CSSStyleDeclaration but got", rootComputedStyle);
     }
 
-    let observer = null;
+    let currentTheme;
 
     const observeStyle = () => {
         const observer = new MutationObserver((mutations) => {
-            mutations.forEach(() => {
-                if (styleElement.relatedStyle) {
-                    styleElement.relatedStyle.remove();
-                }
-                handleStyleElem(styleElement, rootComputedStyle);
-            });
+            if (currentTheme === "light") {
+                return;
+            }
+            styleElement.relatedStyle?.remove();
+            handleStyleElem(styleElement, rootComputedStyle);
         });
         observer.observe(styleElement, { childList: true, subtree: true, characterData: true });
         return observer;
     };
 
     browser.runtime.onMessage.addListener((request) => {
-        const theme = request.theme;
-        if (observer) {
-            observer.disconnect();
-            observer = null;
+        currentTheme = request.theme;
+        styleElement.relatedStyle?.remove();
+        if (currentTheme === "light") {
+            return;
         }
-        if (theme === "dark") {
-            observer = observeStyle();
-        }
+        handleStyleElem(styleElement, rootComputedStyle);
     });
 
     observeStyle();
