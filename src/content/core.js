@@ -177,6 +177,10 @@ function checkShouldIgnore(selectorText) {
 }
 
 function generateModifiedRules(originalStyleElement, rootComputedStyle) {
+    if (!(originalStyleElement instanceof HTMLStyleElement)) {
+        return null;
+    }
+
     if (!originalStyleElement.sheet) {
         return null;
     }
@@ -184,11 +188,11 @@ function generateModifiedRules(originalStyleElement, rootComputedStyle) {
     const { cssRules } = originalStyleElement.sheet;
     const modifiedCssRules = [];
     for (let i = 0; i < cssRules.length; i += 1) {
-        if (!isInstanceOf(cssRules[i], CSSStyleRule)) {
+        const cssRule = cssRules[i];
+        if (!(cssRule instanceof CSSStyleRule)) {
             continue;
         }
 
-        const cssRule = cssRules[i];
         const cssRuleStyle = cssRule.style;
         const cssRuleStylePropList = [...Array.from(cssRule.style), ...SHORT_HAND_PROP];
         const selectorText = cssRule.selectorText;
