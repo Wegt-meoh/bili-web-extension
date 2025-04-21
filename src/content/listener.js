@@ -8,10 +8,9 @@ if (typeof browser === 'undefined') {
 }
 
 export async function setupDomListener(target) {
-    console.log("set up dom listener", target);
     let observer = null;
     function handleShadowRootConstructedStyle(target) {
-
+        console.log("handle constructed style", target);
     }
 
     async function setTheme(theme, target) {
@@ -72,7 +71,7 @@ export async function setupStyleListener(styleElement, rootComputedStyle) {
 
     const observeStyle = () => {
         const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
+            mutations.forEach(() => {
                 if (styleElement.relatedStyle) {
                     styleElement.relatedStyle.remove();
                 }

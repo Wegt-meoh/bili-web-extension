@@ -46,15 +46,19 @@ function traverseShadowRoot(target) {
         throw new TypeError("target is not Node");
     }
 
+    if (target.shadowRoot) {
+        setupDomListener(target.shadowRoot);
+        return;
+    }
+
     const walker = document.createTreeWalker(
         target,
         NodeFilter.SHOW_ELEMENT,
         { acceptNode: () => NodeFilter.FILTER_ACCEPT }
     );
-    let node;
-    while ((node = walker.nextNode())) {
-        if (node.shadowRoot) {
-            setupDomListener(node.shadowRoot);
+    while ((walker.nextNode())) {
+        if (walker.currentNode.shadowRoot) {
+            setupDomListener(walker.currentNode);
         }
     }
 }
@@ -295,9 +299,7 @@ export async function injectDynamicTheme(element) {
     if (originalStyleElemList.length === 0) {
         return;
     }
-
-    const rootComputedStyle = getComputedStyle(element);
-
+    const rootComputedStyle = getComputedStyle(element instanceof ShadowRoot ? element.host : element);
     originalStyleElemList.forEach(style => {
         handleStyleElem(style, rootComputedStyle);
         if (style.classList.contains(`${CLASS_PREFIX} -cors`)) {
