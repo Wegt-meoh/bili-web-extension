@@ -1,4 +1,4 @@
-import { extractHSL, extractRGB, extractRgbFromHex, hslToString, invertHslColor, invertRgbColor, isDarkColor, rgbToHexText, rgbToText } from "./color.js";
+import { extractHSL, extractRGB, extractRgbFromHex, hslToRgb, hslToString, invertHslColor, invertRgbColor, isDarkColor, rgbToHexText, rgbToText } from "./color.js";
 import { CLASS_PREFIX, COLOR_KEYWORDS, IGNORE_SELECTOR, SHORT_HAND_PROP, STYLE_SELECTOR } from "./const.js";
 import { setupDomListener, setupStyleListener } from "./listener.js";
 import { isInstanceOf } from "./utils.js";
@@ -91,7 +91,7 @@ function isOtherColor(color) {
     if (typeof color !== "string") {
         throw new TypeError("color should be string");
     }
-    return /^(rgba?\(|hsla?\(|#)/i.test(color);
+    return /^(rgba?\(|hsla?\(|#|\d+,\d+,\d+)/i.test(color);
 
 }
 
@@ -116,9 +116,21 @@ function extractCssVarName(text) {
     return { varName: newText.slice(0, index).trim(), fallback: newText.slice(index + 1).trim() };
 }
 
+function shouldInvertColor(propType, r, g, b) {
+    if (propType === "") {
+        return false;
+    }
+    const isDarkColorResult = isDarkColor(r, g, b);
+    if ((isDarkColorResult && (propType === "bg" || propType === "border")) || (!isDarkColorResult && propType === "text")) {
+        return false;
+    }
+    return true;
+}
+
 function handleRgbColor(prop, color) {
     const [r, g, b, a] = extractRGB(color);
-    if ((isDarkColor(r, g, b) && /^background.*/i.test(prop)) || (!isDarkColor(r, g, b) && /^color/i.test(prop))) {
+    const propType = getCssPropType(prop);
+    if (!shouldInvertColor(propType, r, g, b)) {
         return color;
     }
     return rgbToText(...invertRgbColor(r, g, b, a));
@@ -126,7 +138,8 @@ function handleRgbColor(prop, color) {
 
 function handleHexColor(prop, color) {
     const [r, g, b, a] = extractRgbFromHex(color);
-    if ((isDarkColor(r, g, b) && /^background.*/i.test(prop)) || (!isDarkColor(r, g, b) && /^color/i.test(prop))) {
+    const propType = getCssPropType(prop);
+    if (!shouldInvertColor(propType, r, g, b)) {
         return color;
     }
     return rgbToHexText(...invertRgbColor(r, g, b, a));
@@ -134,7 +147,9 @@ function handleHexColor(prop, color) {
 
 function handleHslColor(prop, color) {
     const [h, s, l, a] = extractHSL(color);
-    if ((l < 0.5 && /background.*/.test(prop)) || (l >= 0.5 && /color/.test(prop))) {
+    const [r, g, b] = hslToRgb(h, s, l);
+    const propType = getCssPropType(prop);
+    if (!shouldInvertColor(propType, r, g, b)) {
         return color;
     }
     return hslToString(...invertHslColor(h, s, l, a));
@@ -158,11 +173,27 @@ function handleVar(prop, variable, rootComputedStyle) {
     return addCssPrefix(propType, variable);
 }
 
+function handleDirectRgb(prop, rgb) {
+    let [r, g, b] = rgb.matchAll(/\d+/g);
+    r = parseInt(r);
+    g = parseInt(g);
+    b = parseInt(b);
+
+    const propType = getCssPropType(prop);
+    if (!shouldInvertColor(propType, r, g, b)) {
+        return rgb;
+    }
+
+    const [i_r, i_g, i_b] = invertRgbColor(r, g, b);
+    return `${i_r},${i_g},${i_b}`;
+}
+
 function getNewValue(prop, value, rootComputedStyle) {
     let newValue = value.replaceAll(/\brgba?\([\d. ,]+\)/g, color => handleRgbColor(prop, color));
     newValue = newValue.replaceAll(/\bhsla?\([\d. ,]+\)/g, color => handleHslColor(prop, color));
     newValue = newValue.replaceAll(/#[\da-fA-F]{3,8}/g, color => handleHexColor(prop, color));
     newValue = newValue.replaceAll(/--[\w]+[\w\d-]*/g, variable => handleVar(prop, variable, rootComputedStyle));
+    newValue = newValue.replaceAll(/^\d+,\d+,\d+/g, rgb => handleDirectRgb(prop, rgb));
     return newValue;
 }
 
