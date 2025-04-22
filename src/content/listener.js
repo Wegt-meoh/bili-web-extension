@@ -14,7 +14,7 @@ export async function setupDomListener(target) {
             return;
         }
 
-        const styleSheetList = target.adoptedStyleSheets;
+        const styleSheetList = target.adoptedStyleSheets.filter(s => s.tag !== CLASS_PREFIX);
         const modifiedRulesList = styleSheetList.map(styleSheet => generateModifiedRules(styleSheet.cssRules, getComputedStyle(target.host))).filter(i => i !== null);
         const injectedCssStyleSheetList = modifiedRulesList.map(rules => {
             const styleSheet = new CSSStyleSheet();
