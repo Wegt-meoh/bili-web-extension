@@ -207,19 +207,14 @@ function checkShouldIgnore(selectorText) {
     return false;
 }
 
-function generateModifiedRules(originalStyleElement, rootComputedStyle) {
-    if (!(originalStyleElement instanceof HTMLStyleElement)) {
+export function generateModifiedRules(cssRuleList, rootComputedStyle) {
+    if (!(cssRuleList instanceof CSSRuleList)) {
         return null;
     }
 
-    if (!originalStyleElement.sheet) {
-        return null;
-    }
-
-    const { cssRules } = originalStyleElement.sheet;
     const modifiedCssRules = [];
-    for (let i = 0; i < cssRules.length; i += 1) {
-        const cssRule = cssRules[i];
+    for (let i = 0; i < cssRuleList.length; i += 1) {
+        const cssRule = cssRuleList[i];
         if (!(cssRule instanceof CSSStyleRule)) {
             continue;
         }
@@ -270,23 +265,25 @@ function generateModifiedRules(originalStyleElement, rootComputedStyle) {
     return modifiedCssRules;
 }
 
-function generateStyleElement(modifiedCssRules) {
-    const injectedStyleElem = document.createElement("style");
-    injectedStyleElem.classList.add(CLASS_PREFIX);
-    injectedStyleElem.type = "text/css";
-    let textContent = "";
-
-    modifiedCssRules.forEach(cssRule => {
-        textContent += cssRule.selectorText + "{\n";
+export function rulesToCssText(cssRules) {
+    let text = "";
+    cssRules.forEach(cssRule => {
+        text += cssRule.selectorText + "{\n";
         cssRule.rules.forEach(rule => {
             const { prop, value } = rule;
-            textContent += `${prop}: ${value}; \n`;
+            text += `${prop}: ${value}; \n`;
         });
-        textContent += "}\n";
+        text += "}\n";
     });
-    injectedStyleElem.textContent = textContent;
+    return text;
+}
 
-    return injectedStyleElem;
+function generateStyleElement(cssRules) {
+    const styleElement = document.createElement("style");
+    styleElement.classList.add(CLASS_PREFIX);
+    styleElement.type = "text/css";
+    styleElement.textContent = rulesToCssText(cssRules);
+    return styleElement;
 }
 
 function getCssRules(style) {
@@ -337,7 +334,7 @@ export async function injectDynamicTheme(element) {
     const rootComputedStyle = getComputedStyle(element instanceof ShadowRoot ? element.host : element);
     originalStyleElemList.forEach(style => {
         handleStyleElem(style, rootComputedStyle);
-        if (style.classList.contains(`${CLASS_PREFIX} -cors`)) {
+        if (style.classList.contains(`${CLASS_PREFIX}-cors`)) {
             style.remove();
         } else {
             setupStyleListener(style, rootComputedStyle);
@@ -354,7 +351,7 @@ export function handleStyleElem(styleElem, rootComputedStyle) {
         throw new TypeError("rootComputedStyle must be CSSStyleDeclaration but got", rootComputedStyle);
     }
 
-    const modifiedCssRules = generateModifiedRules(styleElem, rootComputedStyle);
+    const modifiedCssRules = generateModifiedRules(styleElem.sheet?.cssRules, rootComputedStyle);
     if (!modifiedCssRules || modifiedCssRules.length === 0) {
         styleElem.relatedStyle = null;
     }

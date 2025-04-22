@@ -1,4 +1,4 @@
-import { handleStyleElem, injectDynamicTheme } from "../content/core";
+import { generateModifiedRules, handleStyleElem, injectDynamicTheme, rulesToCssText } from "../content/core";
 import { CLASS_PREFIX } from "./const";
 import { isInstanceOf } from "./utils";
 
@@ -10,12 +10,27 @@ if (typeof browser === 'undefined') {
 export async function setupDomListener(target) {
     let currentTheme;
     function handleShadowRootConstructedStyle(target) {
-        // console.log("handle constructed style", target);
+        if (!(target instanceof ShadowRoot)) {
+            return;
+        }
+
+        const styleSheetList = target.adoptedStyleSheets;
+        const modifiedRulesList = styleSheetList.map(styleSheet => generateModifiedRules(styleSheet.cssRules, getComputedStyle(target.host))).filter(i => i !== null);
+        const injectedCssStyleSheetList = modifiedRulesList.map(rules => {
+            const styleSheet = new CSSStyleSheet();
+            styleSheet.replaceSync(rulesToCssText(rules));
+            styleSheet.tag = CLASS_PREFIX;
+            return styleSheet;
+        });
+        target.adoptedStyleSheets.push(...injectedCssStyleSheetList);
     }
 
     async function setTheme() {
         if (currentTheme === "light") {
             target.querySelectorAll(`.${CLASS_PREFIX}`).forEach(e => e.remove());
+            if (target instanceof ShadowRoot) {
+                target.adoptedStyleSheets = target.adoptedStyleSheets.filter(s => s.tag !== CLASS_PREFIX);
+            }
         }
 
         if (currentTheme === "dark") {
@@ -70,7 +85,7 @@ export async function setupStyleListener(styleElement, rootComputedStyle) {
     let currentTheme;
 
     const observeStyle = () => {
-        const observer = new MutationObserver((mutations) => {
+        const observer = new MutationObserver(() => {
             if (currentTheme === "light") {
                 return;
             }
