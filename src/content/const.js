@@ -27,4 +27,4 @@ export const COLOR_KEYWORDS = new Set([
 ]);
 
 export const IGNORE_SELECTOR = [".pswp"];
-export const SHORT_HAND_PROP = ["background", "border", "border-left", "border-right", "border-top", "border-bottom"];
+export const SHORT_HAND_PROP = ["background", "border"]; 
