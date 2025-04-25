@@ -5,8 +5,9 @@ import { modifyVideo } from "./video";
 
 injectBasicStyle();
 
-window.onload = () => {
+document.addEventListener("DOMContentLoaded", () => {
+    // ensure the sync cssom onload
     setupDomListener(document.documentElement);
     modifyVideo();
     modifyNavigation();
-};
+});

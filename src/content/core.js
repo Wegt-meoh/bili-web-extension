@@ -58,20 +58,19 @@ function traverseShadowRoot(target) {
     );
     while ((walker.nextNode())) {
         if (walker.currentNode.shadowRoot) {
-            setupDomListener(walker.currentNode);
+            setupDomListener(walker.currentNode.shadowRoot);
         }
     }
 }
 
 function getStyles(element, result = []) {
-    if (!isInstanceOf(element, Element) && !isInstanceOf(element, ShadowRoot)) {
+    if (!(element instanceof Element) && !(element instanceof ShadowRoot)) {
         return result;
     }
-
     if (shouldManageStyle(element)) {
         result.push(element);
     } else {
-        element.querySelectorAll(STYLE_SELECTOR).forEach(item => {
+        element?.querySelectorAll(STYLE_SELECTOR)?.forEach(item => {
             result.push(item);
         });
         traverseShadowRoot(element);
@@ -160,13 +159,9 @@ function addCssPrefix(propType, variable) {
 }
 
 function handleVar(prop, variable, rootComputedStyle) {
-    if (!isOtherColorCssVar(variable, rootComputedStyle)) {
-        return variable;
-    }
-
     const propType = getCssPropType(prop);
 
-    if (propType === "") {
+    if (propType === "" && !isOtherColorCssVar(variable, rootComputedStyle)) {
         return variable;
     }
 
@@ -192,7 +187,7 @@ function getNewValue(prop, value, rootComputedStyle) {
     let newValue = value.replaceAll(/\brgba?\([\d. ,]+\)/g, color => handleRgbColor(prop, color));
     newValue = newValue.replaceAll(/\bhsla?\([\d. ,]+\)/g, color => handleHslColor(prop, color));
     newValue = newValue.replaceAll(/#[\da-fA-F]{3,8}/g, color => handleHexColor(prop, color));
-    newValue = newValue.replaceAll(/--[\w]+[\w\d-]*/g, variable => handleVar(prop, variable, rootComputedStyle));
+    newValue = newValue.replaceAll(/--[\w_]+[\w\d-_]*/g, variable => handleVar(prop, variable, rootComputedStyle));
     newValue = newValue.replaceAll(/^\d+,\d+,\d+/g, rgb => handleDirectRgb(prop, rgb));
     return newValue;
 }
@@ -207,12 +202,31 @@ function checkShouldIgnore(selectorText) {
     return false;
 }
 
-export function generateModifiedRules(cssRuleList, rootComputedStyle) {
+export function generateModifiedRules(cssRuleList, root) {
     if (!(cssRuleList instanceof CSSRuleList)) {
         return null;
     }
 
     const modifiedCssRules = [];
+    const _computedStyleMap = {};
+    const computedStyleMap = new Proxy(_computedStyleMap, {
+        get(target, prop, reciever) {
+            const value = Reflect.get(target, prop, reciever);
+            if (value !== undefined) {
+                return value;
+            }
+
+            if (root !== document && !(root instanceof ShadowRoot)) {
+                throw new TypeError("root must be document or ShadowRoot");
+            }
+
+            const element = root.querySelector(prop);
+            const style = element instanceof Element ? getComputedStyle(element) : { getPropertyValue() { return ""; } };
+            Reflect.set(target, prop, style, reciever);
+            return style;
+        }
+    });
+
     for (let i = 0; i < cssRuleList.length; i += 1) {
         const cssRule = cssRuleList[i];
         if (!(cssRule instanceof CSSStyleRule)) {
@@ -234,18 +248,18 @@ export function generateModifiedRules(cssRuleList, rootComputedStyle) {
             const priority = cssRuleStyle.getPropertyPriority(prop);
 
             // handle the definition of css variable
-            if (/^--[\w]+[\w\d-]*/.test(prop) && isOtherColorCssVar(prop, rootComputedStyle)) {
+            if (/^--[\w-_]+[\w\d-_]*/.test(prop) && isOtherColorCssVar(prop, computedStyleMap[selectorText])) {
                 const relatedProp = ["background", "border", "color"];
                 relatedProp.forEach((cssProp) => {
                     const newPropName = addCssPrefix(getCssPropType(cssProp), prop);
-                    const newValue = getNewValue(cssProp, value, rootComputedStyle);
+                    const newValue = getNewValue(cssProp, value, computedStyleMap[selectorText]);
                     modifiedRules.push({ prop: newPropName, value: newValue });
                 });
                 continue;
             }
 
             // handle the reference of css variable 
-            let newValue = getNewValue(prop, value, rootComputedStyle);
+            let newValue = getNewValue(prop, value, computedStyleMap[selectorText]);
 
             if (value === newValue) {
                 continue;
@@ -324,34 +338,32 @@ async function getOriginalStyleElement(element) {
 }
 
 export async function injectDynamicTheme(element) {
-    if (!isInstanceOf(element, Element) && !isInstanceOf(element, ShadowRoot)) {
+    if (!(element instanceof Node)) {
         return;
     }
+
     const originalStyleElemList = await getOriginalStyleElement(element);
     if (originalStyleElemList.length === 0) {
         return;
     }
-    const rootComputedStyle = getComputedStyle(element instanceof ShadowRoot ? element.host : element);
+
     originalStyleElemList.forEach(style => {
-        handleStyleElem(style, rootComputedStyle);
+        handleStyleElem(style, element.getRootNode());
         if (style.classList.contains(`${CLASS_PREFIX}-cors`)) {
             style.remove();
         } else {
-            setupStyleListener(style, rootComputedStyle);
+            setupStyleListener(style, element.getRootNode());
         }
     });
 }
 
-export function handleStyleElem(styleElem, rootComputedStyle) {
+export function handleStyleElem(styleElem, root) {
     if (!isInstanceOf(styleElem, HTMLStyleElement)) {
-        throw new TypeError("styleElem must be HTMLStyleElement but got", styleElem);
+        console.err("styleElem must be HTMLStyleElement but got", styleElem);
+        return;
     }
 
-    if (!isInstanceOf(rootComputedStyle, CSSStyleDeclaration)) {
-        throw new TypeError("rootComputedStyle must be CSSStyleDeclaration but got", rootComputedStyle);
-    }
-
-    const modifiedCssRules = generateModifiedRules(styleElem.sheet?.cssRules, rootComputedStyle);
+    const modifiedCssRules = generateModifiedRules(styleElem.sheet?.cssRules, root);
     if (!modifiedCssRules || modifiedCssRules.length === 0) {
         styleElem.relatedStyle = null;
     }

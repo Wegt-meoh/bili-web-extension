@@ -15,7 +15,7 @@ export async function setupDomListener(target) {
         }
 
         const styleSheetList = target.adoptedStyleSheets.filter(s => s.tag !== CLASS_PREFIX);
-        const modifiedRulesList = styleSheetList.map(styleSheet => generateModifiedRules(styleSheet.cssRules, getComputedStyle(target.host))).filter(i => i !== null);
+        const modifiedRulesList = styleSheetList.map(styleSheet => generateModifiedRules(styleSheet.cssRules, target)).filter(i => i !== null);
         const injectedCssStyleSheetList = modifiedRulesList.map(rules => {
             const styleSheet = new CSSStyleSheet();
             styleSheet.replaceSync(rulesToCssText(rules));
@@ -66,20 +66,16 @@ export async function setupDomListener(target) {
     try {
         const theme = await browser.runtime.sendMessage({ type: "QUERY_THEME" });
         currentTheme = theme;
-        await setTheme();
         observeTarget(target);
+        setTheme();
     } catch (err) {
         console.error(err);
     }
 }
 
-export async function setupStyleListener(styleElement, rootComputedStyle) {
+export async function setupStyleListener(styleElement, root) {
     if (!isInstanceOf(styleElement, HTMLStyleElement)) {
         throw new TypeError("styleElem must be HTMLStyleElement but got", styleElement);
-    }
-
-    if (!isInstanceOf(rootComputedStyle, CSSStyleDeclaration)) {
-        throw new TypeError("rootComputedStyle must be CSSStyleDeclaration but got", rootComputedStyle);
     }
 
     let currentTheme;
@@ -90,7 +86,7 @@ export async function setupStyleListener(styleElement, rootComputedStyle) {
                 return;
             }
             styleElement.relatedStyle?.remove();
-            handleStyleElem(styleElement, rootComputedStyle);
+            handleStyleElem(styleElement, root);
         });
         observer.observe(styleElement, { childList: true, subtree: true, characterData: true });
         return observer;
@@ -102,7 +98,7 @@ export async function setupStyleListener(styleElement, rootComputedStyle) {
         if (currentTheme === "light") {
             return;
         }
-        handleStyleElem(styleElement, rootComputedStyle);
+        handleStyleElem(styleElement, root);
     });
 
     observeStyle();
