@@ -25,17 +25,6 @@ export const COLOR_KEYWORDS = new Set([
     // 特殊功能色
     "transparent", "currentColor", "inherit", "initial", "unset"
 ]);
-export const EARLY_STYLE = `
-*{
-color: #fff !important;
-background: rgb(24,26,27) !important;
-border-color: rgb(24,26,27) !important;
-}
-`;
-export const BASIC_STYLE = `
-.desktop-download-tip, .palette-button-outer, .floor-single-card, .ad-report, .bg, .bgc{
-    display: none;
-}
-`;
+
 export const IGNORE_SELECTOR = [".pswp"];
 export const SHORT_HAND_PROP = ["background", "border", "border-left", "border-right", "border-top", "border-bottom"];

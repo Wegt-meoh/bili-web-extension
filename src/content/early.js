@@ -1,4 +1,12 @@
-import { CLASS_PREFIX, EARLY_STYLE } from "./const";
+import { CLASS_PREFIX } from "./const";
+
+const EARLY_STYLE = `
+*{
+color: #fff !important;
+background: rgb(24,26,27) !important;
+border-color: rgb(24,26,27) !important;
+}
+`;
 
 export async function injectEarlyStyle() {
     if (typeof browser === 'undefined') {
