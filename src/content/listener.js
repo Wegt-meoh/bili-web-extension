@@ -26,7 +26,13 @@ export async function setupDomListener(target) {
     }
 
     async function setTheme() {
+        const messageBgElme = target === document.documentElement ? document.querySelector(".message-bg") : null;
+
         if (currentTheme === "light") {
+            if (messageBgElme) {
+                const style = messageBgElme.getAttribute("style");
+                messageBgElme.setAttribute("style", style.replace("dark", "light"));
+            }
             target.querySelectorAll(`.${CLASS_PREFIX}`).forEach(e => e.remove());
             if (target instanceof ShadowRoot) {
                 target.adoptedStyleSheets = target.adoptedStyleSheets.filter(s => s.tag !== CLASS_PREFIX);
@@ -36,6 +42,10 @@ export async function setupDomListener(target) {
         if (currentTheme === "dark") {
             if (target instanceof ShadowRoot) {
                 handleShadowRootConstructedStyle(target);
+            }
+            if (messageBgElme) {
+                const style = messageBgElme.getAttribute("style");
+                messageBgElme.setAttribute("style", style.replace("light", "dark"));
             }
             await injectDynamicTheme(target);
             target.querySelector("style.dark-bili-early")?.remove();
