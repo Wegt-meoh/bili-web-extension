@@ -359,7 +359,7 @@ export async function injectDynamicTheme(element) {
 
 export function handleStyleElem(styleElem, root) {
     if (!isInstanceOf(styleElem, HTMLStyleElement)) {
-        console.err("styleElem must be HTMLStyleElement but got", styleElem);
+        console.error("styleElem must be HTMLStyleElement but got", styleElem);
         return;
     }
 
