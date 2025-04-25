@@ -1,5 +1,6 @@
-import { addCssPrefix, generateModifiedRules, handleStyleElem, injectDynamicTheme, rulesToCssText } from "../content/core";
+import { generateModifiedRules, handleStyleElem, injectDynamicTheme, rulesToCssText } from "../content/core";
 import { CLASS_PREFIX } from "./const";
+import { injectFallbackStyle } from "./fallback";
 import { isInstanceOf } from "./utils";
 
 if (typeof browser === 'undefined') {
@@ -34,8 +35,11 @@ export async function setupDomListener(target) {
                 const style = messageBgElem.getAttribute("style");
                 messageBgElem.setAttribute("style", style.replace("dark", "light"));
             }
+
             // clear injected style
             target.querySelectorAll(`.${CLASS_PREFIX}`).forEach(e => e.remove());
+            target.querySelectorAll(`.${CLASS_PREFIX}-fallback`).forEach(e => e.remove());
+
             // handle for shadowRoot adoptedStyleSheet
             if (target instanceof ShadowRoot) {
                 target.adoptedStyleSheets = target.adoptedStyleSheets.filter(s => s.tag !== CLASS_PREFIX);
@@ -43,17 +47,23 @@ export async function setupDomListener(target) {
         }
 
         if (currentTheme === "dark") {
+            // inject fallback style
+            injectFallbackStyle(target);
+
             // handle for shadowRoot adoptedStyleSheet
             if (target instanceof ShadowRoot) {
                 handleShadowRootConstructedStyle(target);
             }
+
             // message background image
             if (messageBgElem) {
                 const style = messageBgElem.getAttribute("style");
                 messageBgElem.setAttribute("style", style.replace("light", "dark"));
             }
+
             // injected dark theme style
             await injectDynamicTheme(target);
+
             // remove early style
             target.querySelector(`style.${CLASS_PREFIX}-early`)?.remove();
         }
