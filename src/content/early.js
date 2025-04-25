@@ -10,8 +10,9 @@ export async function injectEarlyStyle() {
     if (theme === "light") return;
 
     document.documentElement.classList.add(CLASS_PREFIX);
+
     const styleEle = document.createElement('style');
     styleEle.classList.add(`${CLASS_PREFIX}-early`);
     styleEle.textContent = EARLY_STYLE;
-    (document.head || document.documentElement).appendChild(styleEle);
+    document.documentElement.appendChild(styleEle);
 }
