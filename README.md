@@ -9,7 +9,9 @@
 ## Screenshots
 
 ![front page](1.png "front page")
-![video page](2.png "video page")
+![video page](2.png "posts page")
+![video page](3.png "message page")
+![video page](4.png "video page")
 
 ## Download
 
