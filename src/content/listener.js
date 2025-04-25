@@ -1,4 +1,4 @@
-import { generateModifiedRules, handleStyleElem, injectDynamicTheme, rulesToCssText } from "../content/core";
+import { addCssPrefix, generateModifiedRules, handleStyleElem, injectDynamicTheme, rulesToCssText } from "../content/core";
 import { CLASS_PREFIX } from "./const";
 import { isInstanceOf } from "./utils";
 
@@ -26,29 +26,36 @@ export async function setupDomListener(target) {
     }
 
     async function setTheme() {
-        const messageBgElme = target === document.documentElement ? document.querySelector(".message-bg") : null;
+        const messageBgElem = target === document.documentElement ? document.querySelector(".message-bg") : null;
 
         if (currentTheme === "light") {
-            if (messageBgElme) {
-                const style = messageBgElme.getAttribute("style");
-                messageBgElme.setAttribute("style", style.replace("dark", "light"));
+            // message background image
+            if (messageBgElem) {
+                const style = messageBgElem.getAttribute("style");
+                messageBgElem.setAttribute("style", style.replace("dark", "light"));
             }
+            // clear injected style
             target.querySelectorAll(`.${CLASS_PREFIX}`).forEach(e => e.remove());
+            // handle for shadowRoot adoptedStyleSheet
             if (target instanceof ShadowRoot) {
                 target.adoptedStyleSheets = target.adoptedStyleSheets.filter(s => s.tag !== CLASS_PREFIX);
             }
         }
 
         if (currentTheme === "dark") {
+            // handle for shadowRoot adoptedStyleSheet
             if (target instanceof ShadowRoot) {
                 handleShadowRootConstructedStyle(target);
             }
-            if (messageBgElme) {
-                const style = messageBgElme.getAttribute("style");
-                messageBgElme.setAttribute("style", style.replace("light", "dark"));
+            // message background image
+            if (messageBgElem) {
+                const style = messageBgElem.getAttribute("style");
+                messageBgElem.setAttribute("style", style.replace("light", "dark"));
             }
+            // injected dark theme style
             await injectDynamicTheme(target);
-            target.querySelector("style.dark-bili-early")?.remove();
+            // remove early style
+            target.querySelector(`style.${CLASS_PREFIX}-early`)?.remove();
         }
     }
 

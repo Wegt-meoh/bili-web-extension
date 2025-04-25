@@ -154,7 +154,7 @@ function handleHslColor(prop, color) {
     return hslToString(...invertHslColor(h, s, l, a));
 }
 
-function addCssPrefix(propType, variable) {
+export function addCssPrefix(propType, variable) {
     return `--${CLASS_PREFIX}-${propType}${variable}`;
 }
 
