@@ -1,4 +1,4 @@
-import { generateModifiedRules, handleStyleElem, injectDynamicTheme, rulesToCssText } from "../content/core";
+import { generateModifiedRules, handleStyleData, injectDynamicTheme, rulesToCssText } from "../content/core";
 import { CLASS_PREFIX } from "./const";
 import { injectFallbackStyle } from "./fallback";
 import { getStyleSheetText, isInstanceOf, parseCssStyleSheet } from "./utils";
@@ -102,9 +102,10 @@ export async function setupDomListener(target) {
     }
 }
 
-export async function setupStyleListener(styleElement, root) {
-    if (!isInstanceOf(styleElement, HTMLStyleElement)) {
-        throw new TypeError("styleElem must be HTMLStyleElement but got", styleElement);
+export async function setupStyleListener(styleElement) {
+    if (!(styleElement instanceof HTMLStyleElement)) {
+        console.error("styleElem must be HTMLStyleElement but got", styleElement);
+        return;
     }
 
     let currentTheme;
@@ -115,7 +116,7 @@ export async function setupStyleListener(styleElement, root) {
                 return;
             }
             styleElement.relatedStyle?.remove();
-            handleStyleElem(styleElement, root);
+            handleStyleData({ textContent: styleElement.textContent, source: styleElement });
         });
         observer.observe(styleElement, { childList: true, subtree: true, characterData: true });
         return observer;
@@ -127,7 +128,7 @@ export async function setupStyleListener(styleElement, root) {
         if (currentTheme === "light") {
             return;
         }
-        handleStyleElem(styleElement, root);
+        handleStyleData({ textContent: styleElement.textContent, source: styleElement });
     });
 
     observeStyle();

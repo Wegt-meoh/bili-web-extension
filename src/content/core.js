@@ -286,29 +286,31 @@ function getCssRules(style) {
     }
 }
 
-async function getOriginalStyleElement(element) {
+async function getOriginalStyleData(element) {
     const result = await Promise.all(getStyles(element, []).map(async (s) => {
         const rules = getCssRules(s);
         if (rules !== null) {
-            return s;
+            return { textContent: s.textContent, source: s };
         }
 
-        let styleTextContent = "";
-        const injectStyleElem = document.createElement("style");
-        injectStyleElem.classList.add(`${CLASS_PREFIX}-cors`);
-        if (typeof s.textContent !== "string" || s.textContent.length === 0) {
-            const resp = await fetch(s.href);
-            styleTextContent = await resp.text();
+        let textContent = "";
+        if (typeof s.textContent === "string" && s.textContent.length > 0) {
+            textContent = s.textContent;
+        } else if (typeof s.href === "string" && s.href.length > 0) {
+            try {
+                const resp = await fetch(s.href);
+                textContent = await resp.text();
+            } catch (err) {
+                console.error(err);
+                return null;
+            }
         } else {
-            styleTextContent = s.textContent;
+            return null;
         }
-        injectStyleElem.textContent = styleTextContent;
-
-        s.insertAdjacentElement('afterend', injectStyleElem);
-        return injectStyleElem;
+        return { textContent, source: s };
     }));
 
-    return result.filter(item => item);
+    return result.filter(item => item !== null && typeof item.textContent === "string" && item.textContent.length > 0);
 }
 
 export async function injectDynamicTheme(element) {
@@ -316,34 +318,35 @@ export async function injectDynamicTheme(element) {
         return;
     }
 
-    const originalStyleElemList = await getOriginalStyleElement(element);
-    if (originalStyleElemList.length === 0) {
-        return;
-    }
-
-    originalStyleElemList.forEach(style => {
-        handleStyleElem(style, element.getRootNode());
-        if (style.classList.contains(`${CLASS_PREFIX}-cors`)) {
-            style.remove();
-        } else {
-            setupStyleListener(style, element.getRootNode());
+    const styleDataList = await getOriginalStyleData(element);
+    styleDataList.forEach(styleData => {
+        handleStyleData(styleData);
+        if (styleData.source instanceof HTMLStyleElement) {
+            setupStyleListener(styleData.source);
         }
     });
 }
 
-export function handleStyleElem(styleElem, root) {
-    if (!isInstanceOf(styleElem, HTMLStyleElement)) {
-        console.error("styleElem must be HTMLStyleElement but got", styleElem);
+export function handleStyleData(styleData) {
+    const { textContent, source } = styleData;
+    if (typeof textContent !== "string") {
+        console.error("styleData.textContent must be string but got", textContent);
         return;
     }
 
-    const styleCssRules = parseCssStyleSheet(styleElem.textContent);
-    const modifiedCssRules = generateModifiedRules(styleCssRules, root);
-    if (!modifiedCssRules || modifiedCssRules.length === 0) {
-        styleElem.relatedStyle = null;
+    if (!(source instanceof Node)) {
+        console.error("styleData.source must be node but got", source);
+        return;
     }
 
-    const injectStyleElem = generateStyleElement(modifiedCssRules);
-    styleElem.insertAdjacentElement('afterend', injectStyleElem);
-    styleElem.relatedStyle = injectStyleElem;
+    const cssRules = parseCssStyleSheet(textContent);
+    const modifiedRules = generateModifiedRules(cssRules, source.getRootNode());
+    if (!modifiedRules || modifiedRules.length === 0) {
+        source.relatedStyle?.remove();
+        source.relatedStyle = null;
+        return;
+    }
+    const injectedStyleElem = generateStyleElement(modifiedRules);
+    source.insertAdjacentElement('afterend', injectedStyleElem);
+    source.relatedStyle = injectedStyleElem;
 }
