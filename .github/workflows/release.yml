@@ -30,8 +30,8 @@ jobs:
           TAG_NAME=${GITHUB_REF#refs/tags/}
           mkdir extension
           cp -r ./images extension
-          cp -r ./src/background extension
-          cp -r ./src/popup extension
+          cp -r ./src/background extension/src
+          cp -r ./src/popup extension/src
           cp -r ./dist extension
           cp -r ./_locales extension
           cp manifest.json extension
