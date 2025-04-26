@@ -1,7 +1,7 @@
 import { generateModifiedRules, handleStyleElem, injectDynamicTheme, rulesToCssText } from "../content/core";
 import { CLASS_PREFIX } from "./const";
 import { injectFallbackStyle } from "./fallback";
-import { isInstanceOf } from "./utils";
+import { getStyleSheetText, isInstanceOf, parseCssStyleSheet } from "./utils";
 
 if (typeof browser === 'undefined') {
     // eslint-disable-next-line
@@ -16,7 +16,9 @@ export async function setupDomListener(target) {
         }
 
         const styleSheetList = target.adoptedStyleSheets.filter(s => s.tag !== CLASS_PREFIX);
-        const modifiedRulesList = styleSheetList.map(styleSheet => generateModifiedRules(styleSheet.cssRules, target)).filter(i => i !== null);
+        const modifiedRulesList = styleSheetList
+            .map(sheet => generateModifiedRules(parseCssStyleSheet(getStyleSheetText(sheet)), target))
+            .filter(i => i !== null);
         const injectedCssStyleSheetList = modifiedRulesList.map(rules => {
             const styleSheet = new CSSStyleSheet();
             styleSheet.replaceSync(rulesToCssText(rules));

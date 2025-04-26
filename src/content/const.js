@@ -25,6 +25,4 @@ export const COLOR_KEYWORDS = new Set([
     // 特殊功能色
     "transparent", "currentColor", "inherit", "initial", "unset"
 ]);
-
 export const IGNORE_SELECTOR = [".pswp"];
-export const SHORT_HAND_PROP = ["background", "border"]; 

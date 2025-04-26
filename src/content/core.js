@@ -1,7 +1,7 @@
 import { extractHSL, extractRGB, extractRgbFromHex, hslToRgb, hslToString, invertHslColor, invertRgbColor, isDarkColor, rgbToHexText, rgbToText } from "./color.js";
-import { CLASS_PREFIX, COLOR_KEYWORDS, IGNORE_SELECTOR, SHORT_HAND_PROP, STYLE_SELECTOR } from "./const.js";
+import { CLASS_PREFIX, COLOR_KEYWORDS, IGNORE_SELECTOR, STYLE_SELECTOR } from "./const.js";
 import { setupDomListener, setupStyleListener } from "./listener.js";
-import { isInstanceOf } from "./utils.js";
+import { isInstanceOf, parseCssStyleSheet } from "./utils.js";
 
 function isFontsGoogleApiStyle(element) {
     if (typeof element.href !== "string") {
@@ -102,19 +102,6 @@ function getCssPropType(prop) {
     return /^background|^(?!--).*-shadow$/i.test(prop) ? "bg" : /^border|^outline|^column-rule|^stroke$/i.test(prop) ? "border" : /^(color|text-decoration-color|caret-color|fill)$/i.test(prop) ? "text" : "";
 }
 
-function extractCssVarName(text) {
-    if (typeof text !== "string") {
-        throw new TypeError("text must be string but got ", typeof text);
-    }
-
-    const newText = text.slice(4, text.length - 1).trim();
-    const index = newText.indexOf(",");
-    if (index === -1) {
-        return { varName: newText, fallback: undefined };
-    }
-    return { varName: newText.slice(0, index).trim(), fallback: newText.slice(index + 1).trim() };
-}
-
 function shouldInvertColor(propType, r, g, b) {
     if (propType === "") {
         return false;
@@ -158,10 +145,10 @@ export function addCssPrefix(propType, variable) {
     return `--${CLASS_PREFIX}-${propType}${variable}`;
 }
 
-function handleVar(prop, variable, rootComputedStyle) {
+function handleVar(prop, variable, computedStyleMap, selectorText) {
     const propType = getCssPropType(prop);
 
-    if (propType === "" && !isOtherColorCssVar(variable, rootComputedStyle)) {
+    if (propType === "" && !isOtherColorCssVar(variable, computedStyleMap[selectorText])) {
         return variable;
     }
 
@@ -183,11 +170,11 @@ function handleDirectRgb(prop, rgb) {
     return `${i_r},${i_g},${i_b}`;
 }
 
-function getNewValue(prop, value, rootComputedStyle) {
+function getNewValue(prop, value, computedStyleMap, selectorText) {
     let newValue = value.replaceAll(/\brgba?\([\d. ,]+\)/g, color => handleRgbColor(prop, color));
     newValue = newValue.replaceAll(/\bhsla?\([\d. ,]+\)/g, color => handleHslColor(prop, color));
     newValue = newValue.replaceAll(/#[\da-fA-F]{3,8}/g, color => handleHexColor(prop, color));
-    newValue = newValue.replaceAll(/--[\w_]+[\w\d-_]*/g, variable => handleVar(prop, variable, rootComputedStyle));
+    newValue = newValue.replaceAll(/--[\w_]+[\w\d-_]*/g, variable => handleVar(prop, variable, computedStyleMap, selectorText));
     newValue = newValue.replaceAll(/^\d+,\d+,\d+/g, rgb => handleDirectRgb(prop, rgb));
     return newValue;
 }
@@ -202,11 +189,7 @@ function checkShouldIgnore(selectorText) {
     return false;
 }
 
-export function generateModifiedRules(cssRuleList, root) {
-    if (!(cssRuleList instanceof CSSRuleList)) {
-        return null;
-    }
-
+export function generateModifiedRules(cssStyleRules, root) {
     const modifiedCssRules = [];
     const _computedStyleMap = {};
     const computedStyleMap = new Proxy(_computedStyleMap, {
@@ -227,54 +210,45 @@ export function generateModifiedRules(cssRuleList, root) {
         }
     });
 
-    for (let i = 0; i < cssRuleList.length; i += 1) {
-        const cssRule = cssRuleList[i];
-        if (!(cssRule instanceof CSSStyleRule)) {
-            continue;
-        }
-
-        const cssRuleStyle = cssRule.style;
-        const cssRuleStylePropList = [...Array.from(cssRule.style), ...SHORT_HAND_PROP];
-        const selectorText = cssRule.selectorText;
+    cssStyleRules.forEach(cssStyleRule => {
+        const { rules, selectorText } = cssStyleRule;
         const modifiedRules = [];
 
         // ignore this cssrule when match
         if (checkShouldIgnore(selectorText)) {
-            continue;
+            return;
         }
 
-        for (const prop of cssRuleStylePropList) {
-            const value = cssRuleStyle.getPropertyValue(prop).trim();
-            const priority = cssRuleStyle.getPropertyPriority(prop);
-
+        rules.forEach(rule => {
+            const { prop, value, important } = rule;
             // handle the definition of css variable
             if (/^--[\w-_]+[\w\d-_]*/.test(prop) && isOtherColorCssVar(prop, computedStyleMap[selectorText])) {
                 const relatedProp = ["background", "border", "color"];
                 relatedProp.forEach((cssProp) => {
                     const newPropName = addCssPrefix(getCssPropType(cssProp), prop);
-                    const newValue = getNewValue(cssProp, value, computedStyleMap[selectorText]);
+                    const newValue = getNewValue(cssProp, value, computedStyleMap, selectorText);
                     modifiedRules.push({ prop: newPropName, value: newValue });
                 });
-                continue;
+                return;
             }
 
             // handle the reference of css variable 
-            let newValue = getNewValue(prop, value, computedStyleMap[selectorText]);
+            let newValue = getNewValue(prop, value, computedStyleMap, selectorText);
 
             if (value === newValue) {
-                continue;
+                return;
             }
 
-            if (priority === "important") {
+            if (important) {
                 newValue += "!important";
             }
             modifiedRules.push({ prop, value: newValue });
-        }
+        });
 
         if (modifiedRules.length > 0) {
             modifiedCssRules.push({ selectorText: selectorText, rules: modifiedRules });
         }
-    }
+    });
 
     return modifiedCssRules;
 }
@@ -363,7 +337,8 @@ export function handleStyleElem(styleElem, root) {
         return;
     }
 
-    const modifiedCssRules = generateModifiedRules(styleElem.sheet?.cssRules, root);
+    const styleCssRules = parseCssStyleSheet(styleElem.textContent);
+    const modifiedCssRules = generateModifiedRules(styleCssRules, root);
     if (!modifiedCssRules || modifiedCssRules.length === 0) {
         styleElem.relatedStyle = null;
     }
