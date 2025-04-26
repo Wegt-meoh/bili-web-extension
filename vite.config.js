@@ -5,7 +5,6 @@ export default defineConfig({
         rollupOptions: {
             input: {
                 content: "src/content/index.js",
-                background: "src/background/index.js"
             },
             output: {
                 entryFileNames: "[name].js",
