@@ -3,7 +3,7 @@
     "default_locale": "en",
     "name": "bilibili script",
     "description": "some extra features for bilibili",
-    "version": "2.3.1",
+    "version": "3.0.0",
     "browser_specific_settings": {
         "gecko": {
             "id": "wegt-meoh@outlook.com",
