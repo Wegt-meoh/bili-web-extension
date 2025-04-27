@@ -36,7 +36,6 @@ function shouldManageStyle(element) {
             !isFontsGoogleApiStyle(element)
         )
     ) &&
-        !element.classList.toString().includes(CLASS_PREFIX) &&
         element.media.toLowerCase() !== "print" &&
         !element.classList.contains("stylus");
 }
@@ -67,7 +66,7 @@ function getStyles(element, result = []) {
     if (!(element instanceof Element) && !(element instanceof ShadowRoot)) {
         return result;
     }
-    if (shouldManageStyle(element)) {
+    if (shouldManageStyle(element) && element.matches(STYLE_SELECTOR)) {
         result.push(element);
     } else {
         element?.querySelectorAll(STYLE_SELECTOR)?.forEach(item => {
