@@ -197,15 +197,15 @@ export function generateModifiedRules(cssStyleRules, root) {
             if (value !== undefined) {
                 return value;
             }
-
-            if (root !== document && !(root instanceof ShadowRoot)) {
-                throw new TypeError("root must be document or ShadowRoot");
+            const fallback = { getPropertyValue() { return ""; } };
+            try {
+                const element = prop === ":host" ? root.host : root.querySelector(prop);
+                const style = getComputedStyle(element);
+                Reflect.set(target, prop, style, reciever);
+                return style;
+            } catch {
+                return fallback;
             }
-
-            const element = root.querySelector(prop);
-            const style = element instanceof Element ? getComputedStyle(element) : { getPropertyValue() { return ""; } };
-            Reflect.set(target, prop, style, reciever);
-            return style;
         }
     });
 
