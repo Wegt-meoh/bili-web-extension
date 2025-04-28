@@ -9,6 +9,11 @@ if (typeof browser === 'undefined') {
 }
 
 export async function setupDomListener(target) {
+    if (target.hasSetup) {
+        return;
+    }
+    target.hasSetup = true;
+
     let currentTheme;
     function handleShadowRootConstructedStyle(target) {
         if (!(target instanceof ShadowRoot)) {
