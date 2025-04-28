@@ -39,8 +39,7 @@ export async function setupDomListener(target) {
             }
 
             // clear injected style
-            target.querySelectorAll(`.${CLASS_PREFIX}`).forEach(e => e.remove());
-            target.querySelectorAll(`.${CLASS_PREFIX}-fallback`).forEach(e => e.remove());
+            target.querySelectorAll(`[class*=${CLASS_PREFIX}]`).forEach(e => e.remove());
 
             // handle for shadowRoot adoptedStyleSheet
             if (target instanceof ShadowRoot) {
