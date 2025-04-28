@@ -1,7 +1,7 @@
 import { generateModifiedRules, handleStyleData, injectDynamicTheme, rulesToCssText } from "../content/core";
 import { CLASS_PREFIX } from "./const";
 import { injectFallbackStyle } from "./fallback";
-import { getStyleSheetText, isInstanceOf, parseCssStyleSheet } from "./utils";
+import { getStyleSheetText, parseCssStyleSheet } from "./utils";
 
 if (typeof browser === 'undefined') {
     // eslint-disable-next-line

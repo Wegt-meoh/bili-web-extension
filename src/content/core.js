@@ -1,7 +1,7 @@
 import { extractHSL, extractRGB, extractRgbFromHex, hslToRgb, hslToString, invertHslColor, invertRgbColor, isDarkColor, rgbToHexText, rgbToText } from "./color.js";
 import { CLASS_PREFIX, COLOR_KEYWORDS, IGNORE_SELECTOR, STYLE_SELECTOR } from "./const.js";
 import { setupDomListener, setupStyleListener } from "./listener.js";
-import { isInstanceOf, parseCssStyleSheet } from "./utils.js";
+import { parseCssStyleSheet } from "./utils.js";
 
 function isFontsGoogleApiStyle(element) {
     if (typeof element.href !== "string") {
@@ -18,7 +18,7 @@ function isFontsGoogleApiStyle(element) {
 }
 
 function shouldManageStyle(element) {
-    if (!isInstanceOf(element, HTMLElement)) {
+    if (!(element instanceof HTMLElement)) {
         return false;
     }
 
@@ -41,8 +41,8 @@ function shouldManageStyle(element) {
 }
 
 function traverseShadowRoot(target) {
-    if (!target || !isInstanceOf(target, Node)) {
-        throw new TypeError("target is not Node");
+    if (!(target instanceof Node)) {
+        return;
     }
 
     if (target.shadowRoot) {

@@ -1,9 +1,5 @@
 import * as csstree from "css-tree";
 
-export function isInstanceOf(child, father) {
-    return child instanceof father;
-}
-
 export function parseCssStyleSheet(text) {
     const ast = csstree.parse(text);
     const styleCssRules = [];
