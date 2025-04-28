@@ -106,12 +106,13 @@ export async function setupDomListener(target) {
     }
 }
 
-export async function setupStyleListener(styleElement) {
+export function setupStyleListener(styleElement) {
     if (!(styleElement instanceof HTMLStyleElement)) {
         console.error("styleElem must be HTMLStyleElement but got", styleElement);
         return;
     }
 
+    console.log("setup style listener", styleElement);
     let currentTheme;
 
     const observeStyle = () => {

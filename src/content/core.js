@@ -319,10 +319,10 @@ export async function injectDynamicTheme(element) {
 
     const styleDataList = await getOriginalStyleData(element);
     styleDataList.forEach(styleData => {
-        handleStyleData(styleData);
         if (styleData.source instanceof HTMLStyleElement) {
             setupStyleListener(styleData.source);
         }
+        handleStyleData(styleData);
     });
 }
 
