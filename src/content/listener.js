@@ -100,6 +100,7 @@ export async function setupDomListener(target) {
         const theme = await browser.runtime.sendMessage({ type: "QUERY_THEME" });
         currentTheme = theme;
         observeTarget(target);
+        // ensure the observer setup before setTheme because content.js does not block browser 
         setTheme();
     } catch (err) {
         console.error(err);
@@ -112,7 +113,6 @@ export function setupStyleListener(styleElement) {
         return;
     }
 
-    console.log("setup style listener", styleElement);
     let currentTheme;
 
     const observeStyle = () => {

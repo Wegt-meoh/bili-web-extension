@@ -322,6 +322,7 @@ export async function injectDynamicTheme(element) {
         if (styleData.source instanceof HTMLStyleElement) {
             setupStyleListener(styleData.source);
         }
+        // ensure handle style data after observer setup
         handleStyleData(styleData);
     });
 }
