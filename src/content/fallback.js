@@ -3,8 +3,14 @@ import { addCssPrefix } from "./core";
 
 const FALLBACK_STYLE = `
 .bili-comments-bottom-fixed-wrapper>div{
-background-color: var(${addCssPrefix("bg", "--bg1")}) !important;
-border-top-color: var(${addCssPrefix("border", "--graph_bg_thick")}) !important;
+    background-color: var(${addCssPrefix("bg", "--bg1")}) !important;
+    border-top-color: var(${addCssPrefix("border", "--graph_bg_thick")}) !important;
+}
+
+html{
+    color: #fff;
+    background: rgb(24,26,27);
+    fill: #fff;
 }
 `;
 
