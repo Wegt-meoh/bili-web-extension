@@ -6,13 +6,13 @@ export function modifyVideo() {
         }
         if (!video) {
             video = document.querySelector("video");
-            video.tabIndex = -1;
         }
 
         if (!video) {
             return;
         }
 
+        video.tabIndex = -1;
         video.muted = false;
         const flag = e.key === "ArrowDown" ? false : true;
         video.focus();
