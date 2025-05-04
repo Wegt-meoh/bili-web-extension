@@ -25,4 +25,4 @@ export const COLOR_KEYWORDS = new Set([
     // 特殊功能色
     "transparent", "currentColor", "inherit", "initial", "unset"
 ]);
-export const IGNORE_SELECTOR = [".pswp", ".bpx-player-volume-hint"];
+export const IGNORE_SELECTOR = [".pswp", ".bpx-player-volume-hint", ".vertical-slider-wrap.svelte-crc1ty .slider-rail.svelte-crc1ty", ".vertical-slider-wrap.svelte-crc1ty .slider-handle.svelte-crc1ty", ".vertical-slider-wrap.svelte-crc1ty .slider-track.svelte-crc1ty"];
