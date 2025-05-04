@@ -10,7 +10,6 @@ const FALLBACK_STYLE = `
 html{
     color: #fff;
     background: rgb(24,26,27);
-    fill: #fff;
 }
 `;
 
