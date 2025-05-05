@@ -146,12 +146,10 @@ export function addCssPrefix(propType, variable) {
 
 function handleVar(prop, variable, computedStyleMap, selectorText) {
     const propType = getCssPropType(prop);
-
-    if (propType === "" && !isOtherColorCssVar(variable, computedStyleMap[selectorText])) {
-        return variable;
+    if (propType !== "" && isOtherColorCssVar(variable, computedStyleMap[selectorText])) {
+        return addCssPrefix(propType, variable);
     }
-
-    return addCssPrefix(propType, variable);
+    return variable;
 }
 
 function handleDirectRgb(prop, rgb) {
@@ -199,7 +197,10 @@ export function generateModifiedRules(cssStyleRules, root) {
             }
             const fallback = { getPropertyValue() { return ""; } };
             try {
-                const element = prop === ":host" ? root.host : root.querySelector(prop);
+                let element = prop === ":host" ? root.host : root.querySelector(prop.replaceAll(/:hover|:before|:after/gi, ""));
+                if (element === null) {
+                    element = root.documentElement;
+                }
                 const style = getComputedStyle(element);
                 Reflect.set(target, prop, style, reciever);
                 return style;
