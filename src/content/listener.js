@@ -34,15 +34,7 @@ export async function setupDomListener(target) {
     }
 
     async function setTheme() {
-        const messageBgElem = target === document.documentElement ? document.querySelector(".message-bg") : null;
-
         if (currentTheme === "light") {
-            // message background image
-            if (messageBgElem) {
-                const style = messageBgElem.getAttribute("style");
-                messageBgElem.setAttribute("style", style.replace("dark", "light"));
-            }
-
             // clear injected style
             target.querySelectorAll(`[class*=${CLASS_PREFIX}]`).forEach(e => e.remove());
 
@@ -59,12 +51,6 @@ export async function setupDomListener(target) {
             // handle for shadowRoot adoptedStyleSheet
             if (target instanceof ShadowRoot) {
                 handleShadowRootConstructedStyle(target);
-            }
-
-            // message background image
-            if (messageBgElem) {
-                const style = messageBgElem.getAttribute("style");
-                messageBgElem.setAttribute("style", style.replace("light", "dark"));
             }
 
             // injected dark theme style
