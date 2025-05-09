@@ -290,7 +290,7 @@ async function getOriginalStyleData(element) {
     const result = await Promise.all(getStyles(element, []).map(async (s) => {
         const rules = getCssRules(s);
         if (rules !== null) {
-            return { textContent: s.textContent, source: s };
+            return { textContent: null, source: s };
         }
 
         let textContent = "";
@@ -310,7 +310,7 @@ async function getOriginalStyleData(element) {
         return { textContent, source: s };
     }));
 
-    return result.filter(item => item !== null && typeof item.textContent === "string" && item.textContent.length > 0);
+    return result.filter(item => item !== null);
 }
 
 export async function injectDynamicTheme(element) {
@@ -330,17 +330,13 @@ export async function injectDynamicTheme(element) {
 
 export function handleStyleData(styleData) {
     const { textContent, source } = styleData;
-    if (typeof textContent !== "string") {
-        console.error("styleData.textContent must be string but got", textContent);
-        return;
-    }
 
     if (!(source instanceof Node)) {
         console.error("styleData.source must be node but got", source);
         return;
     }
 
-    const cssRules = parseCssStyleSheet(textContent);
+    const cssRules = parseCssStyleSheet(textContent === null ? source.textContent : textContent);
     const modifiedRules = generateModifiedRules(cssRules, source.getRootNode());
     if (!modifiedRules || modifiedRules.length === 0) {
         source.relatedStyle?.remove();
