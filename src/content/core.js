@@ -199,7 +199,7 @@ export function generateModifiedRules(cssStyleRules, root) {
             try {
                 let element = prop === ":host" ? root.host : root.querySelector(prop.replaceAll(/:hover|:before|:after/gi, ""));
                 if (element === null) {
-                    element = root.documentElement;
+                    element = root instanceof ShadowRoot ? root.host : root.documentElement;
                 }
                 const style = getComputedStyle(element);
                 Reflect.set(target, prop, style, reciever);
