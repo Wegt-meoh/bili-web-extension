@@ -38,6 +38,11 @@ export async function setupDomListener(target) {
             // clear injected style
             target.querySelectorAll(`[class*=${CLASS_PREFIX}]`).forEach(e => e.remove());
 
+            let divBg = target.querySelector("div.bg");
+            if (divBg) {
+                divBg.setAttribute("style", divBg.getAttribute("style").replace("bg_dark", "bg"));
+            }
+
             // handle for shadowRoot adoptedStyleSheet
             if (target instanceof ShadowRoot) {
                 target.adoptedStyleSheets = target.adoptedStyleSheets.filter(s => s.tag !== CLASS_PREFIX);
@@ -47,6 +52,11 @@ export async function setupDomListener(target) {
         if (currentTheme === "dark") {
             // inject fallback style
             injectFallbackStyle(target);
+
+            let divBg = target.querySelector("div.bg");
+            if (divBg) {
+                divBg.setAttribute("style", divBg.getAttribute("style").replace("bg", "bg_dark"));
+            }
 
             // handle for shadowRoot adoptedStyleSheet
             if (target instanceof ShadowRoot) {
