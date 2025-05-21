@@ -1,5 +1,5 @@
 export const BASIC_STYLE = `
-.desktop-download-tip, .palette-button-outer, .floor-single-card, .ad-report, .bg, .bgc{
+.desktop-download-tip, .palette-button-outer, .floor-single-card, .ad-report, .bgc{
     display: none;
 }
 
