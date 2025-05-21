@@ -296,7 +296,7 @@ async function getOriginalStyleData(element) {
         let textContent = "";
         if (typeof s.textContent === "string" && s.textContent.length > 0) {
             textContent = s.textContent;
-        } else if (typeof s.href === "string" && s.href.length > 0) {
+        } else if (typeof s.href === "string" && s.href.length > 0 && s.href.endsWith(".css")) {
             try {
                 const resp = await fetch(s.href);
                 textContent = await resp.text();
