@@ -39,8 +39,16 @@ export async function setupDomListener(target) {
             target.querySelectorAll(`[class*=${CLASS_PREFIX}]`).forEach(e => e.remove());
 
             let divBg = target.querySelector("div.bg");
-            if (divBg) {
-                divBg.setAttribute("style", divBg.getAttribute("style").replace("bg_dark", "bg"));
+            if (divBg instanceof HTMLElement) {
+                let bgImage = divBg.style.getPropertyValue("background-image");
+
+                if (bgImage === "") {
+                    bgImage = getComputedStyle(divBg).getPropertyValue("background-image");
+                }
+
+                if (bgImage !== "") {
+                    divBg.style.setProperty("background-image", bgImage.replace("bg_dark", "bg"));
+                }
             }
 
             // handle for shadowRoot adoptedStyleSheet
@@ -54,8 +62,16 @@ export async function setupDomListener(target) {
             injectFallbackStyle(target);
 
             let divBg = target.querySelector("div.bg");
-            if (divBg) {
-                divBg.setAttribute("style", divBg.getAttribute("style").replace("bg", "bg_dark"));
+            if (divBg instanceof HTMLElement) {
+                let bgImage = divBg.style.getPropertyValue("background-image");
+
+                if (bgImage === "") {
+                    bgImage = getComputedStyle(divBg).getPropertyValue("background-image");
+                }
+
+                if (bgImage !== "") {
+                    divBg.style.setProperty("background-image", bgImage.replace("bg", "bg_dark"));
+                }
             }
 
             // handle for shadowRoot adoptedStyleSheet
