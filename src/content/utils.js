@@ -1,5 +1,20 @@
 import * as csstree from "css-tree";
 
+export function parseStyleAttribute(text) {
+    const ast = csstree.parse(text, { context: "declarationList" });
+    const result = [];
+    csstree.walk(ast, node => {
+        if (node.type === "Declaration") {
+            result.push({
+                prop: node.property,
+                value: csstree.generate(node.value),
+                important: node.important
+            });
+        }
+    });
+    return result;
+}
+
 export function parseCssStyleSheet(text) {
     const ast = csstree.parse(text);
     const styleCssRules = [];
@@ -40,4 +55,31 @@ export function getStyleSheetText(sheet) {
         console.warn('Cannot access stylesheet:', e);
         return '';
     }
+}
+
+export function classNameToSelectorText(className) {
+    if (typeof className !== "string") {
+        return "";
+    }
+
+    return className.split(" ").reduce((prev, curr) => `${prev}.${curr}`, "");
+}
+
+export function cssBlocksToText(cssBlocks) {
+    let text = "";
+    cssBlocks.forEach(block => {
+        const { selectorText, rules } = block;
+        text += selectorText + "{\n";
+        text += cssDeclarationToText(rules);
+        text += "}\n";
+    });
+    return text;
+}
+
+export function cssDeclarationToText(declarations) {
+    let result = "";
+    declarations.forEach(de => {
+        result += `${de.prop}:${de.value};`;
+    });
+    return result;
 }

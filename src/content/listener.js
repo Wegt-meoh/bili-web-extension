@@ -1,7 +1,7 @@
-import { generateModifiedRules, handleStyleData, injectDynamicTheme, rulesToCssText } from "../content/core";
+import { generateModifiedRules, handleStyleElementAndLinkElement, injectDynamicTheme } from "../content/core";
 import { CLASS_PREFIX } from "./const";
 import { injectFallbackStyle } from "./fallback";
-import { getStyleSheetText, parseCssStyleSheet } from "./utils";
+import { cssBlocksToText, getStyleSheetText, parseCssStyleSheet } from "./utils";
 
 if (typeof browser === 'undefined') {
     // eslint-disable-next-line
@@ -26,7 +26,7 @@ export async function setupDomListener(target) {
             .filter(i => i !== null);
         const injectedCssStyleSheetList = modifiedRulesList.map(rules => {
             const styleSheet = new CSSStyleSheet();
-            styleSheet.replaceSync(rulesToCssText(rules));
+            styleSheet.replaceSync(cssBlocksToText(rules));
             styleSheet.tag = CLASS_PREFIX;
             return styleSheet;
         });
@@ -88,11 +88,11 @@ export async function setupDomListener(target) {
     }
 
     function observeTarget(target) {
-        const observer = new MutationObserver((mutationsList) => {
+        const observer = new MutationObserver((mutationList) => {
             if (currentTheme === "light") {
                 return;
             }
-            for (const mutation of mutationsList) {
+            for (const mutation of mutationList) {
                 if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
                     mutation.addedNodes.forEach(item => {
                         injectDynamicTheme(item);
@@ -133,7 +133,7 @@ export function setupStyleListener(styleElement) {
                 return;
             }
             styleElement.relatedStyle?.remove();
-            handleStyleData({ textContent: styleElement.textContent, source: styleElement });
+            handleStyleElementAndLinkElement({ textContent: styleElement.textContent, source: styleElement });
         });
         observer.observe(styleElement, { childList: true, subtree: true, characterData: true });
         return observer;
@@ -145,8 +145,26 @@ export function setupStyleListener(styleElement) {
         if (currentTheme === "light") {
             return;
         }
-        handleStyleData({ textContent: styleElement.textContent, source: styleElement });
+        handleStyleElementAndLinkElement({ textContent: styleElement.textContent, source: styleElement });
     });
 
     observeStyle();
+}
+
+export function setupThemeListener(target, onListen, onObserve, mutationOption) {
+    let currentTheme;
+
+    browser.runtime.onMessage.addListener((request) => {
+        currentTheme = request.theme;
+        if (onListen) {
+            onListen(currentTheme);
+        }
+    });
+
+    if (onObserve) {
+        const observer = new MutationObserver((mutationList) => {
+            onObserve(mutationList, currentTheme);
+        });
+        observer.observe(target, mutationOption);
+    }
 }
