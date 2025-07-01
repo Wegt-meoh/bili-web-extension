@@ -300,12 +300,19 @@ async function getOriginalStyleData(element) {
         if (typeof s.textContent === "string" && s.textContent.length > 0) {
             textContent = s.textContent;
         } else if (typeof s.href === "string" && s.href.length > 0 && s.href.endsWith(".css")) {
-            try {
-                const resp = await fetch(s.href);
-                textContent = await resp.text();
-            } catch (err) {
-                console.error(err);
-                return null;
+            let count = 0;
+            while (count <= 3) {
+                try {
+                    count += 1;
+                    const resp = await fetch(s.href);
+                    textContent = await resp.text();
+                    break;
+                } catch (err) {
+                    console.warn(err);
+                    if (count === 3) {
+                        return null;
+                    }
+                }
             }
         } else {
             return null;
@@ -336,7 +343,6 @@ export async function injectDynamicTheme(element) {
     }
 
     try {
-        console.log("injectDynamicTheme", element);
         const inlineStyleElements = getAllInlineStyleElements(element);
         inlineStyleElements.forEach(el => handleInlineStyle(el));
 
