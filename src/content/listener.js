@@ -151,20 +151,57 @@ export function setupStyleListener(styleElement) {
     observeStyle();
 }
 
-export function setupThemeListener(target, onListen, onObserve, mutationOption) {
-    let currentTheme;
+const observedRootList = [];
 
-    browser.runtime.onMessage.addListener((request) => {
+export function setupThemeListener(target, onListen, onObserve, mutationOption) {
+    if (!(target instanceof HTMLElement)) {
+        return;
+    }
+
+    let currentTheme;
+    let observer;
+    const root = target.getRootNode();
+
+    const handleOnMessage = (request) => {
         currentTheme = request.theme;
         if (onListen) {
             onListen(currentTheme);
         }
-    });
+    };
+
+    browser.runtime.onMessage.addListener(handleOnMessage);
 
     if (onObserve) {
-        const observer = new MutationObserver((mutationList) => {
+        observer = new MutationObserver((mutationList) => {
             onObserve(mutationList, currentTheme);
         });
         observer.observe(target, mutationOption);
     }
+
+    if (!observedRootList.includes(root)) {
+        const newRootObserver = new MutationObserver((mutations) => {
+            for (const mutationRecord of mutations) {
+                mutationRecord.removedNodes.forEach(removedNode => {
+                    const index = root.listenedItems.findIndex((item => item.target === removedNode));
+                    if (index !== -1) {
+                        const { listenFunc, observer } = root.listenedItems[index];
+                        browser.runtime.onMessage.removeListener(listenFunc);
+                        if (observer instanceof MutationObserver) {
+                            observer.disconnect();
+                        }
+                        root.listenedItems.splice(index, 1);
+                    }
+                });
+            }
+        });
+        observedRootList.push(root);
+        root.listenedItems = [];
+        newRootObserver.observe(root, { childList: true, subtree: true });
+    }
+
+    root.listenedItems.push({
+        target,
+        listenFunc: handleOnMessage,
+        observer
+    });
 }
