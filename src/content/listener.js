@@ -182,7 +182,7 @@ export function setupThemeListener(target, onListen, onObserve, mutationOption) 
         const newRootObserver = new MutationObserver((mutations) => {
             for (const mutationRecord of mutations) {
                 mutationRecord.removedNodes.forEach(removedNode => {
-                    const index = root.listenedItems.findIndex((item => item.target === removedNode));
+                    const index = root.listenedItems.findIndex((item => item.target === removedNode || removedNode.contains(item.target)));
                     if (index !== -1) {
                         const { listenFunc, observer } = root.listenedItems[index];
                         browser.runtime.onMessage.removeListener(listenFunc);
