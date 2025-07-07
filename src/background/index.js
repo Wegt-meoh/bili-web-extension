@@ -21,7 +21,7 @@ async function setTabTheme(theme) {
 browser.runtime.onMessage.addListener((message, _, sendResponse) => {
     if (message.type === "QUERY_THEME") {
         localStorage.get().then(config => {
-            if (!config) {
+            if (!config.theme) {
                 localStorage.set({ theme: "light" });
                 sendResponse("light");
             } else {
