@@ -39,18 +39,20 @@ browser.runtime.onMessage.addListener((message, _, sendResponse) => {
 
     if (message.type === "QUERY_CACHE") {
         localStorage.get().then(config => {
-            const url = config[message.url];
-            if (!url) {
+            const result = config.urlCache?.[message.url];
+            if (!result) {
+                sendResponse(null);
+            } else if ((result.timeStamp - Date.now()) > 1000 * 60 * 60 * 24) {
                 sendResponse(null);
             } else {
-                sendResponse(url);
+                sendResponse(result.data);
             }
         });
         return true;
     }
 
     if (message.type === "SAVE_CACHE") {
-        localStorage.set({ [message.url]: message.data });
+        localStorage.set({ urlCache: { [message.url]: { data: message.data, timeStamp: Date.now() } } });
         return true;
     }
 });
