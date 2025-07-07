@@ -3,6 +3,11 @@ import { CLASS_PREFIX, COLOR_KEYWORDS, IGNORE_SELECTOR, STYLE_SELECTOR } from ".
 import { setupDomListener, setupStyleListener, setupThemeListener } from "./listener.js";
 import { classNameToSelectorText, cssBlocksToText, cssDeclarationToText, parseCssStyleSheet, parseStyleAttribute } from "./utils.js";
 
+if (typeof browser === 'undefined') {
+    // eslint-disable-next-line
+    var browser = chrome;
+}
+
 function isFontsGoogleApiStyle(element) {
     if (typeof element.href !== "string") {
         return false;
@@ -299,20 +304,42 @@ async function getOriginalStyleData(element) {
         let textContent = "";
         if (typeof s.textContent === "string" && s.textContent.length > 0) {
             textContent = s.textContent;
-        } else if (typeof s.href === "string" && s.href.length > 0 && s.href.endsWith(".css")) {
+        } else if (typeof s.href === "string" && s.href.startsWith("http") && s.href.endsWith(".css")) {
             let count = 0;
-            while (count <= 3) {
-                try {
-                    count += 1;
-                    const resp = await fetch(s.href);
-                    textContent = await resp.text();
-                    break;
-                } catch (err) {
-                    console.warn(err);
-                    if (count === 3) {
-                        return null;
+            const fetchLatest = async () => {
+                while (count <= 5) {
+                    try {
+                        count += 1;
+                        const resp = await fetch(s.href);
+                        return await resp.text();
+                    } catch {
+                        return new Promise((res) => {
+                            setTimeout(() => {
+                                res(fetchLatest());
+                            }, 1000);
+                        });
                     }
                 }
+                return null;
+            };
+
+            const useCache = async () => {
+                return browser.runtime.sendMessage({ type: "QUERY_CACHE", url: s.href });
+            };
+
+            const saveCache = async (data) => {
+                browser.runtime.sendMessage({ type: "SAVE_CACHE", url: s.href, data });
+            };
+
+            const cache = await useCache();
+            if (cache) {
+                textContent = cache;
+            } else {
+                textContent = await fetchLatest();
+                await saveCache(textContent);
+            }
+            if (textContent === null) {
+                return null;
             }
         } else {
             return null;
