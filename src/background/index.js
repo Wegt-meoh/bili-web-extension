@@ -20,12 +20,13 @@ async function setTabTheme(theme) {
 
 browser.runtime.onMessage.addListener((message, _, sendResponse) => {
     if (message.type === "QUERY_THEME") {
-        localStorage.get().then(config => {
-            if (!config.theme) {
+        localStorage.get("theme").then(config => {
+            const { theme } = config;
+            if (theme) {
+                sendResponse(theme);
+            } else {
                 localStorage.set({ theme: "light" });
                 sendResponse("light");
-            } else {
-                sendResponse(config.theme);
             }
         });
         return true;
@@ -38,21 +39,25 @@ browser.runtime.onMessage.addListener((message, _, sendResponse) => {
     }
 
     if (message.type === "QUERY_CACHE") {
-        localStorage.get().then(config => {
-            const result = config.urlCache?.[message.url];
+        localStorage.get(message.url).then(config => {
+            const result = config[message.url];
             if (!result) {
                 sendResponse(null);
-            } else if ((result.timeStamp - Date.now()) > 1000 * 60 * 60 * 24) {
+                return;
+            }
+
+            const { data, timeStamp } = result;
+            if ((Date.now() - timeStamp) >= 1000 * 3600 * 24) {
                 sendResponse(null);
             } else {
-                sendResponse(result.data);
+                sendResponse(data);
             }
         });
         return true;
     }
 
     if (message.type === "SAVE_CACHE") {
-        localStorage.set({ urlCache: { [message.url]: { data: message.data, timeStamp: Date.now() } } });
+        localStorage.set({ [message.url]: { data: message.data, timeStamp: Date.now() } });
         return true;
     }
 });
