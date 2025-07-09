@@ -209,7 +209,7 @@ function generateComputedMap(root) {
                 Reflect.set(target, prop, style, reciever);
                 return style;
             } catch (error) {
-                console.warn(error);
+                console.log(error);
                 return fallback;
             }
         }
@@ -314,7 +314,7 @@ async function getOriginalStyleData(element) {
                         const resp = await fetch(s.href);
                         return await resp.text();
                     } catch (error) {
-                        console.warn(error);
+                        console.log(error);
                         return new Promise((res) => {
                             setTimeout(() => {
                                 res(fetchLatest());

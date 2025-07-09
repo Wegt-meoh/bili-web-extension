@@ -52,7 +52,7 @@ export function getStyleSheetText(sheet) {
         }
         return text;
     } catch (e) {
-        console.warn('Cannot access stylesheet:', e);
+        console.log('Cannot access stylesheet:', e);
         return '';
     }
 }
