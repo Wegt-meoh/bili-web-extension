@@ -1,5 +1,5 @@
 import { extractHSL, extractRGB, extractRgbFromHex, hslToRgb, hslToString, invertHslColor, invertRgbColor, isDarkColor, rgbToHexText, rgbToText } from "./color.js";
-import { CLASS_PREFIX, COLOR_KEYWORDS, IGNORE_SELECTOR, STYLE_SELECTOR } from "./const.js";
+import { CLASS_PREFIX, COLOR_KEYWORDS, IGNORE_SELECTOR, PSEUDO_ELEMENT, STYLE_SELECTOR } from "./const.js";
 import { setupDomListener, setupStyleListener, setupThemeListener } from "./listener.js";
 import { classNameToSelectorText, cssBlocksToText, cssDeclarationToText, parseCssStyleSheet, parseStyleAttribute } from "./utils.js";
 
@@ -201,14 +201,15 @@ function generateComputedMap(root) {
             }
             const fallback = { getPropertyValue() { return ""; } };
             try {
-                let element = prop === ":host" ? root.host : root.querySelector(prop.replaceAll(/:hover|:before|:after/gi, ""));
+                let element = prop === ":host" ? root.host : root.querySelector(prop.replaceAll(/:hover/gi, "").replaceAll(PSEUDO_ELEMENT, ""));
                 if (element === null) {
                     element = root instanceof ShadowRoot ? root.host : root.documentElement;
                 }
                 const style = getComputedStyle(element);
                 Reflect.set(target, prop, style, reciever);
                 return style;
-            } catch {
+            } catch (error) {
+                console.warn(error);
                 return fallback;
             }
         }
@@ -312,7 +313,8 @@ async function getOriginalStyleData(element) {
                         count += 1;
                         const resp = await fetch(s.href);
                         return await resp.text();
-                    } catch {
+                    } catch (error) {
+                        console.warn(error);
                         return new Promise((res) => {
                             setTimeout(() => {
                                 res(fetchLatest());

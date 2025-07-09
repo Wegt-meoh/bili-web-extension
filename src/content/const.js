@@ -26,3 +26,5 @@ export const COLOR_KEYWORDS = new Set([
     "transparent", "currentColor", "inherit", "initial", "unset"
 ]);
 export const IGNORE_SELECTOR = [".pswp", ".bpx-player-volume-hint", ".vertical-slider-wrap.svelte-crc1ty .slider-rail.svelte-crc1ty", ".vertical-slider-wrap.svelte-crc1ty .slider-handle.svelte-crc1ty", ".vertical-slider-wrap.svelte-crc1ty .slider-track.svelte-crc1ty"];
+export const PSEUDO_CLASSES = /:(?:hover|active|focus|visited|link|target|checked|disabled|enabled|required|optional|valid|invalid|in-range|out-of-range|read-only|read-write|first-child|last-child|only-child|nth-child\([^)]+\)|nth-last-child\([^)]+\)|first-of-type|last-of-type|only-of-type|nth-of-type\([^)]+\)|nth-last-of-type\([^)]+\)|empty|not\([^)]+\)|lang\([^)]+\)|root|scope|where\([^)]+\)|is\([^)]+\)|has\([^)]+\)|dir\([^)]+\)|default|indeterminate|placeholder-shown|autofill|playing|paused|current|past|future|fullscreen|modal|picture-in-picture|user-valid|user-invalid)(?![^\s{]*[^{])/gi;
+export const PSEUDO_ELEMENT = /::(?:after|before|first-letter|first-line|selection|backdrop|marker|placeholder|cue|part\([^)]+\)|slotted\([^)]+\)|grammar-error|spelling-error)(?![^\s{]*[^{])/gi;
