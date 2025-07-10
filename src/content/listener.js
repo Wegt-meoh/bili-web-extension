@@ -158,6 +158,7 @@ export function setupThemeListener(target, onListen, onObserve, mutationOption) 
         return;
     }
 
+    console.log("setup theme listener");
     let currentTheme;
     let observer;
     const root = target.getRootNode();
@@ -181,17 +182,21 @@ export function setupThemeListener(target, onListen, onObserve, mutationOption) 
     if (!observedRootList.includes(root)) {
         const newRootObserver = new MutationObserver((mutations) => {
             for (const mutationRecord of mutations) {
-                mutationRecord.removedNodes.forEach(removedNode => {
-                    const index = root.listenedItems.findIndex((item => item.target === removedNode || removedNode.contains(item.target)));
-                    if (index !== -1) {
-                        const { listenFunc, observer } = root.listenedItems[index];
+                console.log("compare", root.listenedItems.length);
+                let i = 0;
+                while (i < root.listenedItems.length) {
+                    if (!root.contains(root.listenedItems[i].target)) {
+                        console.log("remove listener");
+                        const { listenFunc, observer } = root.listenedItems[i];
                         browser.runtime.onMessage.removeListener(listenFunc);
                         if (observer instanceof MutationObserver) {
                             observer.disconnect();
                         }
-                        root.listenedItems.splice(index, 1);
+                        root.listenedItems.splice(i, 1);
+                    } else {
+                        i += 1;
                     }
-                });
+                }
             }
         });
         observedRootList.push(root);
