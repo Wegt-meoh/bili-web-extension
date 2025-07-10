@@ -8,7 +8,7 @@ export function modifyVideo() {
             video = document.querySelector("video");
         }
 
-        if (!video) {
+        if (!video || document.activeElement instanceof HTMLInputElement) {
             return;
         }
 
