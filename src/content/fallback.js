@@ -7,7 +7,7 @@ const FALLBACK_STYLE = `
     border-top-color: var(${addCssPrefix("border", "--graph_bg_thick")}) !important;
 }
 
-html{
+body{
     color: #fff;
     background: rgb(24,26,27);
 }
