@@ -305,7 +305,7 @@ async function getOriginalStyleData(element) {
         let textContent = "";
         if (typeof s.textContent === "string" && s.textContent.length > 0) {
             textContent = s.textContent;
-        } else if (typeof s.href === "string" && s.href.endsWith(".css")) {
+        } else if (typeof s.href === "string") {
             let count = 0;
             const fetchLatest = async () => {
                 while (count <= 5) {
