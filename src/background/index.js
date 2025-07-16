@@ -22,7 +22,7 @@ browser.runtime.onMessage.addListener((message, _, sendResponse) => {
     if (message.type === "QUERY_THEME") {
         localStorage.get("theme").then(config => {
             const { theme } = config;
-            if (theme) {
+            if (["light", "dark", "system"].includes(theme)) {
                 sendResponse(theme);
             } else {
                 localStorage.set({ theme: "light" });

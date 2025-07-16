@@ -2,64 +2,35 @@
     color-scheme: light dark;
 }
 
-body {
-    width: 100px;
-    padding: 10px;
+*{
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
 
+body {
+    width: 180px;
+    height: 100px;
+    border: 3px solid grey;
     font-family: system-ui;
-    text-align: center;
+    display: flex;
+    flex-flow: column;
+    justify-content: start;
+    align-items: center;
+    padding: 6px;
+    gap: 6px;
+    overflow: hidden;
 }
 
 @media (prefers-color-scheme: dark) {
     /* Dark Mode styles go here. */
 }
 
-/* Container for the switch */
-.switch {
-    position: relative;
-    display: inline-block;
-    width: 50px;
-    height: 24px;
-}
-
-/* Hide the checkbox */
-.switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-/* Slider */
-.slider {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #ccc;
-    border-radius: 24px;
+.switch{
     cursor: pointer;
-    transition: 0.4s;
-}
-
-/* The round circle */
-.slider::before {
-    content: "";
-    position: absolute;
-    height: 20px;
-    width: 20px;
-    left: 2px;
-    bottom: 2px;
-    background-color: white;
-    border-radius: 50%;
-    transition: 0.4s;
-}
-
-/* When the checkbox is checked */
-input:checked+.slider {
-    background-color: #4caf50;
-}
-
-input:checked+.slider::before {
-    transform: translateX(26px);
+    border-radius: 3px;
+    border: 1px solid black;
+    width: 80px;
+    text-align: center;
+    padding: 4px 0px; 
 }

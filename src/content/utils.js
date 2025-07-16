@@ -83,3 +83,7 @@ export function cssDeclarationToText(declarations) {
     });
     return result;
 }
+
+export function getSystemColorTheme() {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? "dark" : "light";
+}

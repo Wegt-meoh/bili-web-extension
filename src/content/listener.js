@@ -1,7 +1,7 @@
 import { generateModifiedRules, handleStyleElementAndLinkElement, injectDynamicTheme } from "../content/core";
 import { CLASS_PREFIX } from "./const";
 import { injectFallbackStyle } from "./fallback";
-import { cssBlocksToText, getStyleSheetText, parseCssStyleSheet } from "./utils";
+import { cssBlocksToText, getStyleSheetText, getSystemColorTheme, parseCssStyleSheet } from "./utils";
 
 if (typeof browser === 'undefined') {
     // eslint-disable-next-line
@@ -104,13 +104,14 @@ export async function setupDomListener(target) {
         return observer;
     }
     browser.runtime.onMessage.addListener((request) => {
-        currentTheme = request.theme;
+        const { theme } = request;
+        currentTheme = theme === "system" ? getSystemColorTheme() : theme;
         setTheme();
     });
 
     try {
         const theme = await browser.runtime.sendMessage({ type: "QUERY_THEME" });
-        currentTheme = theme;
+        currentTheme = theme === "system" ? getSystemColorTheme() : theme;
         observeTarget(target);
         // ensure the observer setup before setTheme because content.js does not block browser 
         setTheme();
@@ -140,7 +141,9 @@ export function setupStyleListener(styleElement) {
     };
 
     browser.runtime.onMessage.addListener((request) => {
-        currentTheme = request.theme;
+        const { theme } = request;
+        currentTheme = theme === "system" ? getSystemColorTheme() : theme;
+
         styleElement.relatedStyle?.remove();
         if (currentTheme === "light") {
             return;
@@ -163,7 +166,9 @@ export function setupThemeListener(target, onListen, onObserve, mutationOption) 
     const root = target.getRootNode();
 
     const handleOnMessage = (request) => {
-        currentTheme = request.theme;
+        const { theme } = request;
+        currentTheme = theme === "system" ? getSystemColorTheme() : theme;
+
         if (onListen) {
             onListen(currentTheme);
         }

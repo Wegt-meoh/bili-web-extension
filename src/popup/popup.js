@@ -9,17 +9,32 @@ async function setTabTheme(theme) {
 
 await(async function() {
     // add listener
-    const switchCheckbox = document.querySelector('.switch>input');
+    const switchButton = document.querySelector('.switch');
 
-    if (!switchCheckbox) return;
+    if (!switchButton) return;
 
     // load config
     await browser.runtime.sendMessage({ type: "QUERY_THEME" }, response => {
-        switchCheckbox.checked = response === "light" ? false : true;
+        switchButton.textContent = response;
+        switchButton.addEventListener('click', () => {
+            switch (switchButton.textContent) {
+                case "light":
+                    switchButton.textContent = "dark";
+                    break;
+                case "dark":
+                    switchButton.textContent = "system";
+                    break;
+                case "system":
+                    switchButton.textContent = "light";
+                    break;
+                default:
+                    switchButton.textContent = "light";
+            }
+            setTabTheme(switchButton.textContent);
+        });
     });
 
-    switchCheckbox.addEventListener('change', e => {
-        const theme = e.target.checked ? 'dark' : 'light';
-        setTabTheme(theme);
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener("change", (ev) => {
+        setTabTheme(switchButton.textContent);
     });
 })();
