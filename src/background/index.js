@@ -34,28 +34,4 @@ browser.runtime.onMessage.addListener((message, _, sendResponse) => {
         sendResponse("ok");
         return true;
     }
-
-    if (message.type === "QUERY_CACHE") {
-        localStorage.get(message.url).then(config => {
-            const result = config[message.url];
-            if (!result) {
-                sendResponse(null);
-                return;
-            }
-
-            const { data, timeStamp } = result;
-            if ((Date.now() - timeStamp) >= 1000 * 3600 * 24) {
-                sendResponse(null);
-            } else {
-                sendResponse(data);
-            }
-        });
-        return true;
-    }
-
-    if (message.type === "SAVE_CACHE") {
-        localStorage.set({ [message.url]: { data: message.data, timeStamp: Date.now() } });
-        sendResponse("ok");
-        return true;
-    }
 });

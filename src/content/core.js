@@ -318,28 +318,14 @@ async function getOriginalStyleData(element) {
                         return new Promise((res) => {
                             setTimeout(() => {
                                 res(fetchLatest());
-                            }, 1000);
+                            }, 2000);
                         });
                     }
                 }
                 return null;
             };
 
-            const useCache = async () => {
-                return browser.runtime.sendMessage({ type: "QUERY_CACHE", url: s.href });
-            };
-
-            const saveCache = async (data) => {
-                browser.runtime.sendMessage({ type: "SAVE_CACHE", url: s.href, data });
-            };
-
-            const cache = await useCache();
-            if (cache) {
-                textContent = cache;
-            } else {
-                textContent = await fetchLatest();
-                await saveCache(textContent);
-            }
+            textContent = await fetchLatest();
             if (textContent === null) {
                 return null;
             }
