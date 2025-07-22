@@ -105,12 +105,25 @@ export async function setupDomListener(target) {
     }
     browser.runtime.onMessage.addListener((request) => {
         const { theme } = request;
+        if (theme === "system") {
+            window.matchMedia('(prefers-color-scheme dark)').addEventListener("change", systemThemeOnChange);
+        } else {
+            window.matchMedia('(prefers-color-scheme dark)').removeEventListener("change", systemThemeOnChange);
+        }
         currentTheme = theme === "system" ? getSystemColorTheme() : theme;
         setTheme();
     });
 
+    function systemThemeOnChange(ev) {
+        currentTheme = ev.matches ? "dark" : "light";
+        setTheme();
+    }
+
     try {
         const theme = await browser.runtime.sendMessage({ type: "QUERY_THEME" });
+        if (theme === "system") {
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener("change", systemThemeOnChange);
+        }
         currentTheme = theme === "system" ? getSystemColorTheme() : theme;
         observeTarget(target);
         // ensure the observer setup before setTheme because content.js does not block browser 
@@ -128,27 +141,36 @@ export function setupStyleListener(styleElement) {
 
     let currentTheme;
 
-    const observeStyle = () => {
-        const observer = new MutationObserver(() => {
-            if (currentTheme === "light") {
-                return;
-            }
-            styleElement.relatedStyle?.remove();
-            handleStyleElementAndLinkElement({ textContent: styleElement.textContent, source: styleElement });
-        });
-        observer.observe(styleElement, { childList: true, subtree: true, characterData: true });
-        return observer;
-    };
-
-    browser.runtime.onMessage.addListener((request) => {
-        const { theme } = request;
-        currentTheme = theme === "system" ? getSystemColorTheme() : theme;
-
+    function setTheme() {
         styleElement.relatedStyle?.remove();
         if (currentTheme === "light") {
             return;
         }
         handleStyleElementAndLinkElement({ textContent: styleElement.textContent, source: styleElement });
+    }
+
+    const observeStyle = () => {
+        const observer = new MutationObserver(() => {
+            setTheme();
+        });
+        observer.observe(styleElement, { childList: true, subtree: true, characterData: true });
+        return observer;
+    };
+
+    function systemThemeOnChange(ev) {
+        currentTheme = ev.matches ? "dark" : "light";
+        setTheme();
+    }
+
+    browser.runtime.onMessage.addListener((request) => {
+        const { theme } = request;
+        if (theme === "system") {
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener("change", systemThemeOnChange);
+        } else {
+            window.matchMedia('(prefers-color-scheme: dark)').removeEventListener("change", systemThemeOnChange);
+        }
+        currentTheme = theme === "system" ? getSystemColorTheme() : theme;
+        setTheme();
     });
 
     observeStyle();
@@ -164,9 +186,20 @@ export function setupThemeListener(target, onListen, onObserve, mutationOption) 
     let currentTheme;
     let observer;
     const root = target.getRootNode();
+    function systemThemeOnChange(ev) {
+        currentTheme = ev.matches ? "dark" : "light";
+        if (onListen) {
+            onListen(currentTheme);
+        }
+    }
 
     const handleOnMessage = (request) => {
         const { theme } = request;
+        if (theme === "system") {
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener("change", systemThemeOnChange);
+        } else {
+            window.matchMedia('(prefers-color-scheme: dark)').removeEventListener("change", systemThemeOnChange);
+        }
         currentTheme = theme === "system" ? getSystemColorTheme() : theme;
 
         if (onListen) {

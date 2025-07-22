@@ -6,16 +6,12 @@ if (typeof browser === 'undefined') {
 var localStorage = browser.storage.local;
 
 async function getActiceTab() {
-    const tabs = await browser.tabs.query({ active: true, currentWindow: true });
-    if (tabs.length <= 0) return;
-
-    const activeTabId = tabs[0].id;
-    return activeTabId;
+    return await browser.tabs.query({ url: ["https://*.bilibili.com/*"] });
 }
 
 async function setTabTheme(theme) {
-    const activeTabId = await getActiceTab();
-    await browser.tabs.sendMessage(activeTabId, { theme });
+    const tabs = await getActiceTab();
+    await Promise.all(tabs.map(tab => browser.tabs.sendMessage(tab.id, { theme })));
 }
 
 browser.runtime.onMessage.addListener((message, _, sendResponse) => {
@@ -35,6 +31,7 @@ browser.runtime.onMessage.addListener((message, _, sendResponse) => {
     if (message.type === "APPLY_THEME") {
         setTabTheme(message.theme);
         localStorage.set({ theme: message.theme });
+        sendResponse("ok");
         return true;
     }
 
@@ -58,6 +55,7 @@ browser.runtime.onMessage.addListener((message, _, sendResponse) => {
 
     if (message.type === "SAVE_CACHE") {
         localStorage.set({ [message.url]: { data: message.data, timeStamp: Date.now() } });
+        sendResponse("ok");
         return true;
     }
 });
