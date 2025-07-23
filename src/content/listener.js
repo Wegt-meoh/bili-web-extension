@@ -47,7 +47,7 @@ export async function setupDomListener(target) {
                 }
 
                 if (bgImage !== "") {
-                    divBg.style.setProperty("background-image", bgImage.replace("bg_dark", "bg"));
+                    divBg.style.setProperty("background-image", bgImage.replace("bg_dark.png", "bg.png"));
                 }
             }
 
@@ -70,7 +70,7 @@ export async function setupDomListener(target) {
                 }
 
                 if (bgImage !== "") {
-                    divBg.style.setProperty("background-image", bgImage.replace("bg", "bg_dark"));
+                    divBg.style.setProperty("background-image", bgImage.replace("bg.png", "bg_dark.png"));
                 }
             }
 
