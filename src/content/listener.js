@@ -139,6 +139,12 @@ export function setupStyleListener(styleElement) {
         return;
     }
 
+    if (styleElement.hasSetup === true) {
+        return;
+    }
+
+    styleElement.hasSetup = true;
+
     let currentTheme;
 
     function setTheme() {

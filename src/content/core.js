@@ -297,42 +297,33 @@ function getCssRules(style) {
 
 async function getOriginalStyleData(element) {
     const result = await Promise.all(getStyles(element, []).map(async (s) => {
-        const rules = getCssRules(s);
-        if (rules !== null) {
+        const fetchLatest = async () => {
+            let count = 0;
+            while (count <= 5) {
+                try {
+                    count += 1;
+                    const resp = await fetch(s.href);
+                    return await resp.text();
+                } catch (error) {
+                    console.log(error);
+                    return new Promise((res) => {
+                        setTimeout(() => {
+                            res(fetchLatest());
+                        }, 2000);
+                    });
+                }
+            }
+            return "";
+        };
+
+        if (s instanceof HTMLStyleElement) {
             return { textContent: null, source: s };
         }
 
-        let textContent = "";
-        if (typeof s.textContent === "string" && s.textContent.length > 0) {
-            textContent = s.textContent;
-        } else if (typeof s.href === "string") {
-            let count = 0;
-            const fetchLatest = async () => {
-                while (count <= 5) {
-                    try {
-                        count += 1;
-                        const resp = await fetch(s.href);
-                        return await resp.text();
-                    } catch (error) {
-                        console.log(error);
-                        return new Promise((res) => {
-                            setTimeout(() => {
-                                res(fetchLatest());
-                            }, 2000);
-                        });
-                    }
-                }
-                return null;
-            };
-
-            textContent = await fetchLatest();
-            if (textContent === null) {
-                return null;
-            }
-        } else {
-            return null;
+        if (s instanceof HTMLLinkElement && typeof s.href === "string" && s.href.length > 0) {
+            const textContent = await fetchLatest();
+            return { textContent, source: s };
         }
-        return { textContent, source: s };
     }));
 
     return result.filter(item => item !== null);
@@ -430,7 +421,7 @@ export function handleStyleElementAndLinkElement(styleData) {
         return;
     }
 
-    const cssRules = parseCssStyleSheet(textContent === null ? source.textContent : textContent);
+    const cssRules = parseCssStyleSheet(source instanceof HTMLStyleElement ? source.textContent : textContent);
     const modifiedRules = generateModifiedRules(cssRules, source.getRootNode());
 
     if (!modifiedRules || modifiedRules.length === 0) {
