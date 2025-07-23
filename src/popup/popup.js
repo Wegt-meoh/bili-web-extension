@@ -7,6 +7,15 @@ function setTabTheme(theme) {
     browser.runtime.sendMessage({ type: "APPLY_THEME", theme });
 }
 
+async function getActiveTab() {
+    const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+    return tabs[0];
+}
+
+function extractHostnameByUrl(url) {
+    return (new URL(url)).hostname;
+}
+
 await(async function() {
     // add listener
     const switchButton = document.querySelector('.switch');
@@ -14,7 +23,10 @@ await(async function() {
     if (!switchButton) return;
 
     // load config
-    const theme = await browser.runtime.sendMessage({ type: "QUERY_THEME" });
+    const activeTab = await getActiveTab();
+    const theme = await browser.runtime.sendMessage({
+        type: "QUERY_THEME", hostname: extractHostnameByUrl(activeTab.url)
+    });
     switchButton.textContent = theme;
     switchButton.addEventListener('click', () => {
         switch (switchButton.textContent) {

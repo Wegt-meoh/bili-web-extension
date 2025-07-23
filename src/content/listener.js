@@ -120,7 +120,7 @@ export async function setupDomListener(target) {
     }
 
     try {
-        const theme = await browser.runtime.sendMessage({ type: "QUERY_THEME" });
+        const theme = await browser.runtime.sendMessage({ type: "QUERY_THEME", hostname: location.hostname });
         if (theme === "system") {
             window.matchMedia('(prefers-color-scheme: dark)').addEventListener("change", systemThemeOnChange);
         }

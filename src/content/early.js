@@ -15,7 +15,7 @@ export async function injectEarlyStyle() {
         var browser = chrome;
     }
 
-    const theme = await browser.runtime.sendMessage({ type: "QUERY_THEME" });
+    const theme = await browser.runtime.sendMessage({ type: "QUERY_THEME", hostname: location.hostname });
     if (theme === "light") return;
 
     document.documentElement.classList.add(CLASS_PREFIX);

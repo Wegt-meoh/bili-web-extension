@@ -23,7 +23,7 @@
                 "dist/content.js"
             ],
             "matches": [
-                "*://*.bilibili.com/*"
+                "*://*/*"
             ],
             "run_at": "document_start"
         }

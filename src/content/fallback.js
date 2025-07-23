@@ -19,7 +19,7 @@ export async function injectFallbackStyle(root) {
         var browser = chrome;
     }
 
-    const theme = await browser.runtime.sendMessage({ type: "QUERY_THEME" });
+    const theme = await browser.runtime.sendMessage({ type: "QUERY_THEME", hostname: location.hostname });
     if (theme === "light") return;
 
     const styleEle = document.createElement('style');
