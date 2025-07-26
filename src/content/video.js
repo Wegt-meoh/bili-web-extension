@@ -4,6 +4,11 @@ export function modifyVideo() {
         if (e.key !== "ArrowUp" && e.key !== "ArrowDown") {
             return;
         }
+
+        if (e.shiftKey || e.ctrlKey || e.metaKey) {
+            return;
+        }
+
         if (!video) {
             video = document.querySelector("video");
         }
