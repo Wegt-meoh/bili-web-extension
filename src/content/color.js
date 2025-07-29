@@ -110,19 +110,15 @@ export function hslToRgb(h, s, l) {
 }
 
 export function invertHslColor(h, s, l, a) {
+    // color is too light invert it
     if (1 - l < 0.12) {
         let [r, g, b] = hslToRgb(h, s, 1 - l);
         let [i_h, i_s, i_l] = rgbToHsl(r + 24, g + 26, b + 27);
-        if (a !== undefined) {
-            return [i_h, i_s, i_l, a];
-        }
-        return [i_h, i_s, i_l];
+        return [i_h, i_s, i_l, a];
     }
 
-    if (a !== undefined) {
-        return [h, s, 1 - l, a];
-    }
-    return [h, s, 1 - l];
+    // no need invert
+    return [h, s, 1 - l, a];
 }
 
 export function invertRgbColor(r, g, b, a) {
