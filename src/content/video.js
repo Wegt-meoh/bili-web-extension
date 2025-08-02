@@ -5,7 +5,7 @@ export function modifyVideo() {
             return;
         }
 
-        if (e.shiftKey || e.ctrlKey || e.metaKey) {
+        if (e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) {
             return;
         }
 
