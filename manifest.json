@@ -26,6 +26,15 @@
                 "*://*/*"
             ],
             "run_at": "document_start"
+        },
+        {
+            "js":[
+                "dist/video.js"
+            ],
+            "matches":[
+                "*://*.bilibili.com/*"
+            ],
+            "run_at":"document_start"
         }
     ],
     "background": {
