@@ -421,12 +421,12 @@ function handleInlineStyle(element) {
 }
 
 async function createOrUpdateStyleElement(cssElement) {
-    if (!(cssElement instanceof HTMLStyleElement) && !(cssElement instanceof HTMLLinkElement)) {
-        Logger.err("cssElement must be HTMLStyleElement or HTMLLinkElment but got", cssElement);
+    if (!(cssElement instanceof HTMLStyleElement) && !(cssElement instanceof HTMLLinkElement) && !(cssElement instanceof SVGStyleElement)) {
+        Logger.err("cssElement must be HTMLStyleElement or HTMLLinkElment or SVGStyleElement but got", cssElement);
         return;
     }
 
-    const cssRules = parseCssStyleSheet(cssElement instanceof HTMLStyleElement ? cssElement.textContent : await getHtmlLinkElementData(cssElement));
+    const cssRules = parseCssStyleSheet(cssElement instanceof HTMLLinkElement ? await getHtmlLinkElementData(cssElement) : cssElement.textContent);
     const modifiedRules = generateModifiedRules(cssRules, cssElement.getRootNode());
 
     if (!modifiedRules || modifiedRules.length === 0) {
