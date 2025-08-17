@@ -52,7 +52,7 @@ export function getStyleSheetText(sheet) {
         }
         return text;
     } catch (e) {
-        console.log('Cannot access stylesheet:', e);
+        console.log("bili-web-extension: catch err", e);
         return '';
     }
 }

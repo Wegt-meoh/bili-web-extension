@@ -1,7 +1,6 @@
 import { extractHSL, extractRGB, extractRgbFromHex, hslToRgb, hslToString, invertHslColor, invertRgbColor, isDarkColor, rgbToHexText, rgbToText } from "./color.js";
 import { CLASS_PREFIX, COLOR_KEYWORDS, IGNORE_SELECTOR, PSEUDO_ELEMENT, STYLE_SELECTOR } from "./const.js";
-import { setupDomListener, setupStyleListener, setupThemeListener } from "./listener.js";
-import { classNameToSelectorText, cssBlocksToText, cssDeclarationToText, parseCssStyleSheet, parseStyleAttribute } from "./utils.js";
+import { classNameToSelectorText, cssBlocksToText, cssDeclarationToText, getStyleSheetText, parseCssStyleSheet, parseStyleAttribute } from "./utils.js";
 
 if (typeof browser === 'undefined') {
     // eslint-disable-next-line
@@ -45,13 +44,26 @@ function shouldManageStyle(element) {
         !element.classList.contains("stylus");
 }
 
-function traverseShadowRoot(target) {
+async function injectInDeep(target) {
     if (!(target instanceof Node)) {
         return;
     }
 
-    if (target.shadowRoot) {
-        setupDomListener(target.shadowRoot);
+    const deliver = (t) => {
+        if (t.shadowRoot instanceof ShadowRoot) {
+            setupDynamicDarkThemeForShadowRoot(t.shadowRoot);
+            return true;
+        }
+
+        if (t instanceof HTMLFrameElement) {
+            setupDynamicDarkTheme(t.contentDocument);
+            return true;
+        }
+
+        return false;
+    };
+
+    if (deliver(target)) {
         return;
     }
 
@@ -60,10 +72,9 @@ function traverseShadowRoot(target) {
         NodeFilter.SHOW_ELEMENT,
         { acceptNode: () => NodeFilter.FILTER_ACCEPT }
     );
+
     while ((walker.nextNode())) {
-        if (walker.currentNode.shadowRoot) {
-            setupDomListener(walker.currentNode.shadowRoot);
-        }
+        deliver(walker.currentNode);
     }
 }
 
@@ -77,7 +88,6 @@ function getStyles(element, result = []) {
         element?.querySelectorAll(STYLE_SELECTOR)?.forEach(item => {
             result.push(item);
         });
-        traverseShadowRoot(element);
     }
 
     return result;
@@ -209,7 +219,7 @@ function generateComputedMap(root) {
                 Reflect.set(target, prop, style, reciever);
                 return style;
             } catch (error) {
-                console.log(error);
+                console.log("bili-web-extension: catch err", error);
                 return fallback;
             }
         }
@@ -224,36 +234,40 @@ function handleRules(rules, computedStyle, computedStyleMap, selectorText) {
     }
     const modifiedRules = [];
     rules.forEach(rule => {
-        const { prop, value, important } = rule;
-        // handle the definition of css variable
-        if (/^--[\w-_]+[\w\d-_]*/.test(prop) && isOtherColorCssVar(prop, computedStyleMap[selectorText])) {
-            const relatedProp = ["background", "border", "color"];
-            relatedProp.forEach((cssProp) => {
-                const newPropName = addCssPrefix(getCssPropType(cssProp), prop);
-                const newValue = getNewValue(cssProp, value, computedStyleMap, selectorText);
-                modifiedRules.push({ prop: newPropName, value: newValue });
-            });
-            return;
-        }
+        try {
+            const { prop, value, important } = rule;
+            // handle the definition of css variable
+            if (/^--[\w-_]+[\w\d-_]*/.test(prop) && isOtherColorCssVar(prop, computedStyleMap[selectorText])) {
+                const relatedProp = ["background", "border", "color"];
+                relatedProp.forEach((cssProp) => {
+                    const newPropName = addCssPrefix(getCssPropType(cssProp), prop);
+                    const newValue = getNewValue(cssProp, value, computedStyleMap, selectorText);
+                    modifiedRules.push({ prop: newPropName, value: newValue });
+                });
+                return;
+            }
 
-        // handle the reference of css variable 
-        let newValue = getNewValue(prop, value, computedStyleMap, selectorText);
+            // handle the reference of css variable 
+            let newValue = getNewValue(prop, value, computedStyleMap, selectorText);
 
-        if (value === newValue) {
-            return;
-        }
+            if (value === newValue) {
+                return;
+            }
 
-        if (important) {
-            newValue += "!important";
+            if (important) {
+                newValue += "!important";
+            }
+            modifiedRules.push({ prop, value: newValue });
+        } catch (error) {
+            console.log("bili-web-extension: catch err", error);
         }
-        modifiedRules.push({ prop, value: newValue });
     });
     return modifiedRules;
 }
 
-export function generateModifiedRules(cssStyleRules, root) {
+export function generateModifiedRules(cssStyleRules, rootNode) {
     const modifiedCssRules = [];
-    const computedStyleMap = generateComputedMap(root);
+    const computedStyleMap = generateComputedMap(rootNode);
 
     cssStyleRules.forEach(cssStyleRule => {
         const { rules, selectorText } = cssStyleRule;
@@ -295,92 +309,98 @@ function getCssRules(style) {
     }
 }
 
-async function getOriginalStyleData(element) {
-    const result = await Promise.all(getStyles(element, []).map(async (s) => {
-        const fetchLatest = async () => {
-            let count = 0;
-            while (count <= 5) {
-                try {
-                    count += 1;
-                    const resp = await fetch(s.href);
-                    return await resp.text();
-                } catch (error) {
-                    console.log(error);
-                    return new Promise((res) => {
-                        setTimeout(() => {
-                            res(fetchLatest());
-                        }, 2000);
-                    });
-                }
+async function getHtmlLinkElementData(linkElement) {
+    if (!(linkElement instanceof HTMLLinkElement)) {
+        console.error("element must be HTMLLinkElement but got ", linkElement);
+        return "";
+    }
+
+    const fetchLatest = async (href) => {
+        let count = 0;
+        while (count <= 5) {
+            try {
+                count += 1;
+                const resp = await fetch(href);
+                return await resp.text();
+            } catch (error) {
+                console.log("bili-web-extension: catch err", error);
+                return new Promise((res) => {
+                    setTimeout(() => {
+                        res(fetchLatest());
+                    }, 2000);
+                });
             }
-            return "";
-        };
-
-        if (s instanceof HTMLStyleElement) {
-            return { textContent: null, source: s };
         }
+        return "";
+    };
 
-        if (s instanceof HTMLLinkElement && typeof s.href === "string" && s.href.length > 0) {
-            const textContent = await fetchLatest();
-            return { textContent, source: s };
-        }
-    }));
-
-    return result.filter(item => item !== null);
+    if (linkElement instanceof HTMLLinkElement && typeof linkElement.href === "string" && linkElement.href.length > 0) {
+        return fetchLatest(linkElement.href);
+    }
+    return "";
 }
 
 function getAllInlineStyleElements(element, result = []) {
-    if (!(element instanceof Element)) {
+    if (!(element instanceof Element) && !(element instanceof ShadowRoot)) {
         return result;
     }
 
-    const style = element.getAttribute("style");
-    if (typeof style === "string" && style.length > 0) {
-        result.push(element);
+    if (element instanceof Element) {
+        const style = element.getAttribute("style");
+        if (typeof style === "string" && style.length > 0) {
+            result.push(element);
+        }
     }
 
     element.querySelectorAll("[style]").forEach(e => result.push(e));
     return result;
 }
 
-export async function injectDynamicTheme(element) {
-    if (!(element instanceof Node)) {
+async function injectDynamicTheme(target) {
+    if (!(target instanceof Node)) {
         return;
     }
 
-    try {
-        const inlineStyleElements = getAllInlineStyleElements(element);
-        inlineStyleElements.forEach(el => handleInlineStyle(el));
+    // handle inline style elements
+    const inlineStyleElements = getAllInlineStyleElements(target);
+    inlineStyleElements.forEach(el => handleInlineStyle(el));
 
-        const styleDataList = await getOriginalStyleData(element);
-        styleDataList.forEach(styleData => {
-            if (styleData.source instanceof HTMLStyleElement) {
-                setupStyleListener(styleData.source);
+    // handle style element and css external link
+    await Promise.all(
+        getStyles(target).map(styleElement => {
+            if (styleElement instanceof HTMLStyleElement) {
+                observeStyleElement(styleElement);
             }
+
+            if (styleElement instanceof HTMLLinkElement) {
+                observeLinkElement(styleElement);
+            }
+
             // ensure handle style data after observer setup
-            handleStyleElementAndLinkElement(styleData);
-        });
-    } catch (err) {
-        console.log("bili-web-extension: catch err", err);
-    }
+            return createOrUpdateStyleElement(styleElement);
+        })
+    );
+
+    injectInDeep(target);
 }
+
+const originalInlineStyle = new Map();
 
 function handleInlineStyle(element) {
     if (!(element instanceof Element)) {
         return;
     }
 
-    // ignore this cssrule when match
+    // ignore the element which match the cssrule
     if (checkShouldIgnore(classNameToSelectorText(element.className))) {
         return;
     }
 
-    element.originalStyle = element.getAttribute("style");
-    if (element.originalStyle === null) {
-        return;
+    if (!originalInlineStyle.has(element)) {
+        originalInlineStyle.set(element, element.getAttribute("style"));
     }
 
-    const cssRules = parseStyleAttribute(element.originalStyle);
+    const cssRules = parseStyleAttribute(originalInlineStyle.get(element));
     const modifiedRules = handleRules(cssRules, getComputedStyle(element));
 
     if (modifiedRules.length === 0) {
@@ -398,39 +418,193 @@ function handleInlineStyle(element) {
     }, [...cssRules]);
 
     element.setAttribute("style", cssDeclarationToText(modifiedStyle));
-
-    if (element.hasHandled === true) {
-        return;
-    }
-
-    setupThemeListener(element, (theme) => {
-        if (theme === "light") {
-            element.setAttribute("style", element.originalStyle);
-        } else {
-            handleInlineStyle(element);
-        }
-    });
-    element.hasHandled = true;
 }
 
-export function handleStyleElementAndLinkElement(styleData) {
-    const { textContent, source } = styleData;
-
-    if (!(source instanceof Node)) {
-        console.error("styleData.source must be node but got", source);
+async function createOrUpdateStyleElement(cssElement) {
+    if (!(cssElement instanceof HTMLStyleElement) && !(cssElement instanceof HTMLLinkElement)) {
+        console.error("cssElement must be HTMLStyleElement or HTMLLinkElment but got", cssElement);
         return;
     }
 
-    const cssRules = parseCssStyleSheet(source instanceof HTMLStyleElement ? source.textContent : textContent);
-    const modifiedRules = generateModifiedRules(cssRules, source.getRootNode());
+    const cssRules = parseCssStyleSheet(cssElement instanceof HTMLStyleElement ? cssElement.textContent : await getHtmlLinkElementData(cssElement));
+    const modifiedRules = generateModifiedRules(cssRules, cssElement.getRootNode());
 
     if (!modifiedRules || modifiedRules.length === 0) {
-        source.relatedStyle?.remove();
-        source.relatedStyle = null;
+        if (cssElement._relatedStyle instanceof HTMLStyleElement) {
+            cssElement._relatedStyle.textContent = "";
+        }
         return;
     }
 
     const injectedStyleElem = generateStyleElement(modifiedRules);
-    source.insertAdjacentElement('afterend', injectedStyleElem);
-    source.relatedStyle = injectedStyleElem;
+    cssElement.insertAdjacentElement('afterend', injectedStyleElem);
+    cssElement._relatedStyle = injectedStyleElem;
+}
+
+function handleAdoptedStyle(docum) {
+    if (!(docum instanceof ShadowRoot) && !(docum instanceof Document)) {
+        return;
+    }
+
+    const styleSheetList = docum.adoptedStyleSheets.filter(s => s._tag !== CLASS_PREFIX);
+    const modifiedRulesList = styleSheetList
+        .map(sheet => generateModifiedRules(parseCssStyleSheet(getStyleSheetText(sheet)), docum))
+        .filter(i => i !== null);
+    const injectedCssStyleSheetList = modifiedRulesList.map(rules => {
+        const styleSheet = new CSSStyleSheet();
+        styleSheet.replaceSync(cssBlocksToText(rules));
+        styleSheet._tag = CLASS_PREFIX;
+        return styleSheet;
+    });
+    docum.adoptedStyleSheets.push(...injectedCssStyleSheetList);
+}
+
+
+export function setupDynamicDarkTheme(docum) {
+    if (!(docum instanceof Document)) {
+        return;
+    }
+
+    if (observedRoots.has(document.documentElement)) {
+        return;
+    }
+
+    observedRoots.add(document.documentElement);
+
+    try {
+        handleAdoptedStyle(docum);
+        observe(docum.documentElement);
+        injectDynamicTheme(docum.documentElement);
+    } catch (err) {
+        console.log("bili-web-extension: catch err", err);
+    }
+}
+
+function setupDynamicDarkThemeForShadowRoot(shadowRoot) {
+    if (!(shadowRoot instanceof ShadowRoot)) {
+        return;
+    }
+
+    if (observedRoots.has(shadowRoot)) {
+        return;
+    }
+
+    observedRoots.add(shadowRoot);
+
+    try {
+        handleAdoptedStyle(shadowRoot);
+        observe(shadowRoot);
+        injectDynamicTheme(shadowRoot);
+    } catch (err) {
+        console.log("bili-web-extension: catch err", err);
+    }
+}
+
+const observedStyleElement = new Set();
+
+function observeLinkElement(linkElement) {
+    if (!(linkElement instanceof HTMLLinkElement)) {
+        console.error("element must be HTMLLinkElement but got", linkElement);
+        return;
+    }
+
+    if (observedStyleElement.has(linkElement)) {
+        return;
+    }
+
+    observedStyleElement.add(linkElement);
+
+    const observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+            if (mutation.type === "attributes" && mutation.attributeName === "href") {
+                createOrUpdateStyleElement(linkElement);
+            }
+        }
+        createOrUpdateStyleElement(linkElement);
+    });
+    observer.observe(linkElement, { attributes: true });
+    observers.push(observer);
+}
+
+function observeStyleElement(styleElement) {
+    if (!(styleElement instanceof HTMLStyleElement)) {
+        console.error("styleElement must be HTMLStyleElement but got", styleElement);
+        return;
+    }
+
+    if (observedStyleElement.has(styleElement)) {
+        return;
+    }
+
+    observedStyleElement.add(styleElement);
+
+    const observer = new MutationObserver((mutations) => {
+        for (const { type } of mutations) {
+            if (type === "childList" || type === "characterData") {
+                createOrUpdateStyleElement(styleElement);
+            }
+        }
+    });
+    observer.observe(styleElement, { childList: true, subtree: true, characterData: true });
+    observers.push(observer);
+}
+
+const observedRoots = new Set();
+const observers = [];
+
+function observe(target) {
+    const observer = new MutationObserver((mutations,) => {
+        for (let { type, addedNodes } of mutations) {
+            if (type === "childList") {
+                for (let addedNode of addedNodes) {
+                    const { classList } = addedNode;
+                    if (classList instanceof DOMTokenList && classList.contains(CLASS_PREFIX)) {
+                        continue;
+                    }
+                    injectDynamicTheme(addedNode);
+                }
+            }
+        }
+    });
+
+    observer.observe(target, { childList: true, subtree: true });
+    observers.push(observer);
+}
+
+export function addSystemThemeListener(callback) {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener("change", callback);
+    return () => window.matchMedia('(prefers-color-scheme: dark)').removeEventListener("change", callback);
+}
+
+export function cleanInjectedDarkTheme() {
+    observedRoots.forEach(root => {
+        if (!(root instanceof ShadowRoot)) {
+            root = root.getRootNode();
+        }
+
+        // clean all injected style element
+        root.querySelectorAll("." + CLASS_PREFIX).forEach(e => e.remove());
+
+        // clean all inserted adopted styleSheet
+        root.adoptedStyleSheets.forEach(s => s.cssRules);
+        root.adoptedStyleSheets = root.adoptedStyleSheets.filter(s => s._tag !== CLASS_PREFIX);
+    });
+    observedRoots.clear();
+
+    observers.forEach(o => {
+        if (o instanceof MutationObserver) {
+            o.disconnect();
+        }
+    });
+    observers.splice(0, observers.length);
+
+    observedStyleElement.clear();
+
+    // clean all inline style
+    originalInlineStyle.forEach((v, k) => {
+        if (k instanceof Element) {
+            k.setAttribute("style", v);
+        }
+    });
+    originalInlineStyle.clear();
 }
