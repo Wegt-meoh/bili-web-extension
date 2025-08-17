@@ -52,7 +52,7 @@ export function getStyleSheetText(sheet) {
         }
         return text;
     } catch (e) {
-        console.log("bili-web-extension: catch err", e);
+        Logger.log(e);
         return '';
     }
 }
@@ -86,4 +86,14 @@ export function cssDeclarationToText(declarations) {
 
 export function getSystemColorTheme() {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? "dark" : "light";
+}
+
+export class Logger {
+    static log(msg) {
+        console.log("bili-web-extension: catch err", msg);
+    }
+
+    static err(reason) {
+        console.error("bili-web-extension: catch err", reason);
+    }
 }

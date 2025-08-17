@@ -1,6 +1,6 @@
 import { extractHSL, extractRGB, extractRgbFromHex, hslToRgb, hslToString, invertHslColor, invertRgbColor, isDarkColor, rgbToHexText, rgbToText } from "./color.js";
 import { CLASS_PREFIX, COLOR_KEYWORDS, IGNORE_SELECTOR, PSEUDO_ELEMENT, STYLE_SELECTOR } from "./const.js";
-import { classNameToSelectorText, cssBlocksToText, cssDeclarationToText, getStyleSheetText, parseCssStyleSheet, parseStyleAttribute } from "./utils.js";
+import { classNameToSelectorText, cssBlocksToText, cssDeclarationToText, getStyleSheetText, Logger, parseCssStyleSheet, parseStyleAttribute } from "./utils.js";
 
 if (typeof browser === 'undefined') {
     // eslint-disable-next-line
@@ -16,7 +16,7 @@ function isFontsGoogleApiStyle(element) {
         const elementURL = new URL(element.href);
         return elementURL.hostname === 'fonts.googleapis.com';
     } catch (err) {
-        console.error(err);
+        Logger.err(err);
         return false;
     }
 }
@@ -219,7 +219,7 @@ function generateComputedMap(root) {
                 Reflect.set(target, prop, style, reciever);
                 return style;
             } catch (error) {
-                console.log("bili-web-extension: catch err", error);
+                Logger.log(error);
                 return fallback;
             }
         }
@@ -259,7 +259,7 @@ function handleRules(rules, computedStyle, computedStyleMap, selectorText) {
             }
             modifiedRules.push({ prop, value: newValue });
         } catch (error) {
-            console.log("bili-web-extension: catch err", error);
+            Logger.log(error);
         }
     });
     return modifiedRules;
@@ -311,7 +311,7 @@ function getCssRules(style) {
 
 async function getHtmlLinkElementData(linkElement) {
     if (!(linkElement instanceof HTMLLinkElement)) {
-        console.error("element must be HTMLLinkElement but got ", linkElement);
+        Logger.err("element must be HTMLLinkElement but got ", linkElement);
         return "";
     }
 
@@ -323,7 +323,7 @@ async function getHtmlLinkElementData(linkElement) {
                 const resp = await fetch(href);
                 return await resp.text();
             } catch (error) {
-                console.log("bili-web-extension: catch err", error);
+                Logger.log(error);
                 return new Promise((res) => {
                     setTimeout(() => {
                         res(fetchLatest());
@@ -422,7 +422,7 @@ function handleInlineStyle(element) {
 
 async function createOrUpdateStyleElement(cssElement) {
     if (!(cssElement instanceof HTMLStyleElement) && !(cssElement instanceof HTMLLinkElement)) {
-        console.error("cssElement must be HTMLStyleElement or HTMLLinkElment but got", cssElement);
+        Logger.err("cssElement must be HTMLStyleElement or HTMLLinkElment but got", cssElement);
         return;
     }
 
@@ -476,7 +476,7 @@ export function setupDynamicDarkTheme(docum) {
         observe(docum.documentElement);
         injectDynamicTheme(docum.documentElement);
     } catch (err) {
-        console.log("bili-web-extension: catch err", err);
+        Logger.log(err);
     }
 }
 
@@ -496,7 +496,7 @@ function setupDynamicDarkThemeForShadowRoot(shadowRoot) {
         observe(shadowRoot);
         injectDynamicTheme(shadowRoot);
     } catch (err) {
-        console.log("bili-web-extension: catch err", err);
+        Logger.log(err);
     }
 }
 
@@ -504,7 +504,7 @@ const observedStyleElement = new Set();
 
 function observeLinkElement(linkElement) {
     if (!(linkElement instanceof HTMLLinkElement)) {
-        console.error("element must be HTMLLinkElement but got", linkElement);
+        Logger.err("element must be HTMLLinkElement but got", linkElement);
         return;
     }
 
@@ -528,7 +528,7 @@ function observeLinkElement(linkElement) {
 
 function observeStyleElement(styleElement) {
     if (!(styleElement instanceof HTMLStyleElement)) {
-        console.error("styleElement must be HTMLStyleElement but got", styleElement);
+        Logger.err("styleElement must be HTMLStyleElement but got", styleElement);
         return;
     }
 
