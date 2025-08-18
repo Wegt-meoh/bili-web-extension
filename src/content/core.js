@@ -247,7 +247,6 @@ function handleRules(rules, computedStyle, computedStyleMap, selectorText) {
                 return;
             }
 
-            // handle the reference of css variable 
             let newValue = getNewValue(prop, value, computedStyleMap, selectorText);
 
             if (value === newValue) {
@@ -407,17 +406,7 @@ function handleInlineStyle(element) {
         return;
     }
 
-    const modifiedStyle = modifiedRules.reduce((prev, curr) => {
-        prev.forEach(p => {
-            if (p.prop === curr.prop) {
-                p.value = curr.value;
-                p.important = curr.important;
-            }
-        });
-        return prev;
-    }, [...cssRules]);
-
-    element.setAttribute("style", cssDeclarationToText(modifiedStyle));
+    element.setAttribute("style", cssDeclarationToText([...cssRules, ...modifiedRules]));
 }
 
 async function createOrUpdateStyleElement(cssElement) {
