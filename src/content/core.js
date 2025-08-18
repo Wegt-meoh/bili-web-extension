@@ -49,21 +49,21 @@ async function injectInDeep(target) {
         return;
     }
 
-    const deliver = (t) => {
+    const deliver = async (t) => {
         if (t.shadowRoot instanceof ShadowRoot) {
-            setupDynamicDarkThemeForShadowRoot(t.shadowRoot);
+            await setupDynamicDarkThemeForShadowRoot(t.shadowRoot);
             return true;
         }
 
         if (t instanceof HTMLFrameElement) {
-            setupDynamicDarkTheme(t.contentDocument);
+            await setupDynamicDarkTheme(t.contentDocument);
             return true;
         }
 
         return false;
     };
 
-    if (deliver(target)) {
+    if (await deliver(target)) {
         return;
     }
 
@@ -74,7 +74,7 @@ async function injectInDeep(target) {
     );
 
     while ((walker.nextNode())) {
-        deliver(walker.currentNode);
+        await deliver(walker.currentNode);
     }
 }
 
@@ -380,7 +380,7 @@ async function injectDynamicTheme(target) {
         })
     );
 
-    injectInDeep(target);
+    await injectInDeep(target);
 }
 
 const originalInlineStyle = new Map();
@@ -449,7 +449,7 @@ function handleAdoptedStyle(docum) {
 }
 
 
-export function setupDynamicDarkTheme(docum) {
+export async function setupDynamicDarkTheme(docum) {
     if (!(docum instanceof Document)) {
         return;
     }
@@ -463,13 +463,13 @@ export function setupDynamicDarkTheme(docum) {
     try {
         handleAdoptedStyle(docum);
         observe(docum.documentElement);
-        injectDynamicTheme(docum.documentElement);
+        await injectDynamicTheme(docum.documentElement);
     } catch (err) {
         Logger.log(err);
     }
 }
 
-function setupDynamicDarkThemeForShadowRoot(shadowRoot) {
+async function setupDynamicDarkThemeForShadowRoot(shadowRoot) {
     if (!(shadowRoot instanceof ShadowRoot)) {
         return;
     }
@@ -483,7 +483,7 @@ function setupDynamicDarkThemeForShadowRoot(shadowRoot) {
     try {
         handleAdoptedStyle(shadowRoot);
         observe(shadowRoot);
-        injectDynamicTheme(shadowRoot);
+        await injectDynamicTheme(shadowRoot);
     } catch (err) {
         Logger.log(err);
     }

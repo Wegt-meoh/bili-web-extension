@@ -1,4 +1,5 @@
 import { injectBasicStyle } from "./basicStyle";
+import { CLASS_PREFIX } from "./const";
 import { addSystemThemeListener, cleanInjectedDarkTheme, setupDynamicDarkTheme } from "./core";
 import { injectEarlyStyle } from "./early";
 import { modifyNavigation } from "./onlyOneTab";
@@ -13,7 +14,7 @@ let removeSystemThemeListener = null;
 let oldTheme = "";
 let oldColor = "";
 
-function onMessage(message) {
+async function onMessage(message) {
     // newTheme: 'light' | 'dark' | 'system'
     let { theme: newTheme } = message;
 
@@ -56,7 +57,7 @@ function onMessage(message) {
             break;
         case "dark":
             cleanInjectedDarkTheme();
-            setupDynamicDarkTheme(document);
+            await setupDynamicDarkTheme(document);
             if (bgDiv) {
                 bgDiv.setAttribute("style", bgDiv.getAttribute("style")?.replace("bg.png", "bg_dark.png"));
             }
@@ -67,10 +68,11 @@ function onMessage(message) {
 
 
 injectBasicStyle();
-//injectEarlyStyle();
+injectEarlyStyle();
 
 document.addEventListener("DOMContentLoaded", async () => {
     const theme = await browser.runtime.sendMessage({ type: "QUERY_THEME", hostname: location.hostname });
     browser.runtime.onMessage.addListener(onMessage);
-    onMessage({ theme });
+    await onMessage({ theme });
+    document.querySelectorAll("." + CLASS_PREFIX + "-early").forEach(e => e.remove());
 });
