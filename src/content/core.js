@@ -27,7 +27,7 @@ function shouldManageStyle(element) {
         (element instanceof SVGStyleElement) ||
         (element instanceof HTMLLinkElement &&
             Boolean(element.rel) &&
-            element.rel.toLowerCase().includes("stylesheet") &&
+            (element.rel.toLowerCase().includes("stylesheet") || element.as.toLowerCase() === "style") &&
             Boolean(element.href) &&
             !element.disabled &&
             (navigator.userAgent.toLowerCase().includes("firefox") ?
