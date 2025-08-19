@@ -361,20 +361,19 @@ async function injectDynamicTheme(target) {
     inlineStyleElements.forEach(el => handleInlineStyle(el));
 
     // handle style element and css external link
-    await Promise.all(
-        getStyles(target).map(styleElement => {
-            if (styleElement instanceof HTMLStyleElement) {
-                observeStyleElement(styleElement);
-            }
+    let cssElements = getStyles(target);
+    for (let cssElement of cssElements) {
+        if (cssElement instanceof HTMLStyleElement) {
+            observeStyleElement(cssElement);
+        }
 
-            if (styleElement instanceof HTMLLinkElement) {
-                observeLinkElement(styleElement);
-            }
+        if (cssElement instanceof HTMLLinkElement) {
+            observeLinkElement(cssElement);
+        }
 
-            // ensure handle style data after observer setup
-            return createOrUpdateStyleElement(styleElement);
-        })
-    );
+        // ensure handle style data after observer setup
+        await createOrUpdateStyleElement(cssElement);
+    }
 
     await injectInDeep(target);
 }
