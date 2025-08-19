@@ -22,10 +22,6 @@ function isFontsGoogleApiStyle(element) {
 }
 
 function shouldManageStyle(element) {
-    if (!(element instanceof HTMLElement)) {
-        return false;
-    }
-
     return (
         (element instanceof HTMLStyleElement) ||
         (element instanceof SVGStyleElement) ||
