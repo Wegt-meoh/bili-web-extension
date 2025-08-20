@@ -1,3 +1,4 @@
+import { writeCssFetchCache, readCssFetchCache } from "./cache.js";
 import { extractHSL, extractRGB, extractRgbFromHex, hslToRgb, hslToString, invertHslColor, invertRgbColor, isDarkColor, rgbToHexText, rgbToText } from "./color.js";
 import { CLASS_PREFIX, COLOR_KEYWORDS, defaultDarkColor, IGNORE_SELECTOR, PSEUDO_ELEMENT, STYLE_SELECTOR } from "./const.js";
 import { classNameToSelectorText, cssBlocksToText, cssDeclarationToText, getStyleSheetText, Logger, parseCssStyleSheet, parseStyleAttribute } from "./utils.js";
@@ -339,7 +340,12 @@ async function getHtmlLinkElementData(linkElement) {
     };
 
     if (linkElement instanceof HTMLLinkElement && typeof linkElement.href === "string" && linkElement.href.length > 0) {
-        return fetchLatest(linkElement.href);
+        let data = readCssFetchCache(linkElement.href);
+        if (!data) {
+            data = await fetchLatest(linkElement.href);
+        }
+        writeCssFetchCache(linkElement.href, data);
+        return data;
     }
     return "";
 }
