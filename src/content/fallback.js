@@ -1,5 +1,6 @@
 import { CLASS_PREFIX } from "./const";
 import { addCssPrefix } from "./core";
+import { getSystemColorTheme } from "./utils";
 
 const FALLBACK_STYLE = `
 .bili-comments-bottom-fixed-wrapper>div{
@@ -20,7 +21,7 @@ export async function injectFallbackStyle(root) {
     }
 
     const theme = await browser.runtime.sendMessage({ type: "QUERY_THEME", hostname: location.hostname });
-    if (theme === "light") return;
+    if (theme === "light" || (theme === "system" && getSystemColorTheme() === "light")) return;
 
     const styleEle = document.createElement('style');
     styleEle.classList.add(`${CLASS_PREFIX}-fallback`);

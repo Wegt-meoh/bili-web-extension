@@ -1,4 +1,5 @@
 import { CLASS_PREFIX } from "./const";
+import { getSystemColorTheme } from "./utils";
 
 const EARLY_STYLE = `
 *{
@@ -16,7 +17,7 @@ export async function injectEarlyStyle() {
     }
 
     const theme = await browser.runtime.sendMessage({ type: "QUERY_THEME", hostname: location.hostname });
-    if (theme === "light") return;
+    if (theme === "light" || (theme === "system" && getSystemColorTheme() === "light")) return;
 
     const styleEle = document.createElement('style');
     styleEle.classList.add(`${CLASS_PREFIX}-early`);
