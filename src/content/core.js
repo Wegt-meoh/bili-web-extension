@@ -1,5 +1,5 @@
 import { extractHSL, extractRGB, extractRgbFromHex, hslToRgb, hslToString, invertHslColor, invertRgbColor, isDarkColor, rgbToHexText, rgbToText } from "./color.js";
-import { CLASS_PREFIX, COLOR_KEYWORDS, IGNORE_SELECTOR, PSEUDO_ELEMENT, STYLE_SELECTOR } from "./const.js";
+import { CLASS_PREFIX, COLOR_KEYWORDS, defaultDarkColor, IGNORE_SELECTOR, PSEUDO_ELEMENT, STYLE_SELECTOR } from "./const.js";
 import { classNameToSelectorText, cssBlocksToText, cssDeclarationToText, getStyleSheetText, Logger, parseCssStyleSheet, parseStyleAttribute } from "./utils.js";
 
 if (typeof browser === 'undefined') {
@@ -184,6 +184,15 @@ function getNewValue(prop, value, computedStyleMap, selectorText) {
     newValue = newValue.replaceAll(/#[\da-fA-F]{3,8}/g, color => handleHexColor(prop, color));
     newValue = newValue.replaceAll(/--[\w_]+[\w\d-_]*/g, variable => handleVar(prop, variable, computedStyleMap, selectorText));
     newValue = newValue.replaceAll(/^\d+,\d+,\d+/g, rgb => handleDirectRgb(prop, rgb));
+
+    // handle keyword color
+    newValue = newValue.replaceAll(/inherit|initial/g, keyword => {
+        const type = getCssPropType(prop);
+        if (type !== "") {
+            return defaultDarkColor[type] || keyword;
+        }
+        return keyword;
+    });
     return newValue;
 }
 
