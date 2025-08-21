@@ -2,7 +2,6 @@ import { injectBasicStyle } from "./basicStyle";
 import { CLASS_PREFIX } from "./const";
 import { addSystemThemeListener, cleanInjectedDarkTheme, setupDynamicDarkTheme } from "./core";
 import { injectEarlyStyle } from "./early";
-import { modifyNavigation } from "./onlyOneTab";
 import { getSystemColorTheme } from "./utils";
 
 if (typeof browser === 'undefined') {
