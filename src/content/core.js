@@ -292,16 +292,6 @@ export function generateModifiedRules(cssStyleRules, rootNode) {
     return modifiedCssRules;
 }
 
-
-
-function generateStyleElement(cssRules) {
-    const styleElement = document.createElement("style");
-    styleElement.classList.add(CLASS_PREFIX);
-    styleElement.type = "text/css";
-    styleElement.textContent = cssBlocksToText(cssRules);
-    return styleElement;
-}
-
 function getCssRules(style) {
     try {
         const rules = style.sheet?.cssRules;
@@ -427,15 +417,11 @@ async function createOrUpdateStyleElement(cssElement) {
 
     const cssRules = parseCssStyleSheet(cssElement instanceof HTMLLinkElement ? await getHtmlLinkElementData(cssElement) : cssElement.textContent);
     const modifiedRules = generateModifiedRules(cssRules, cssElement.getRootNode());
-
-    if (!modifiedRules || modifiedRules.length === 0) {
-        if (cssElement._relatedStyle instanceof HTMLStyleElement) {
-            cssElement._relatedStyle.textContent = "";
-        }
-        return;
-    }
-
-    const injectedStyleElem = generateStyleElement(modifiedRules);
+    cssElement._relatedStyle?.remove();
+    const injectedStyleElem = document.createElement("style");
+    injectedStyleElem.classList.add(CLASS_PREFIX);
+    injectedStyleElem.type = "text/css";
+    injectedStyleElem.textContent = cssBlocksToText(modifiedRules);
     cssElement.insertAdjacentElement('afterend', injectedStyleElem);
     cssElement._relatedStyle = injectedStyleElem;
 }
