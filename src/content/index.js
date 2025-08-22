@@ -1,6 +1,6 @@
 import { injectBasicStyle } from "./basicStyle";
 import { CLASS_PREFIX } from "./const";
-import { addSystemThemeListener, cleanInjectedDarkTheme, setupDynamicDarkTheme } from "./core";
+import { cleanInjectedDarkTheme, setupDynamicDarkTheme } from "./core";
 import { injectEarlyStyle } from "./early";
 import { getSystemColorTheme, Logger } from "./utils";
 
@@ -9,36 +9,28 @@ if (typeof browser === 'undefined') {
     var browser = chrome;
 }
 
-let removeSystemThemeListener = null;
-let oldTheme = "";
 let oldColor = "";
+
+const mediaMatches = window.matchMedia('(prefers-color-scheme: dark)');
+
+function systemThemeOnChange() {
+    onMessage({ type: "APPLY_THEME", theme: "system" });
+}
 
 async function applyTheme(newTheme) {
     // newTheme: 'light' | 'dark' | 'system'
-
     if (!["light", "dark", "system"].includes(newTheme)) {
         Logger.err("apply got unexpected data", newTheme);
         newTheme = "light";
     }
 
-    let newColor = "";
-
-    if (oldTheme === newTheme) {
-        return;
-    }
-    oldTheme = newTheme;
-
-    if (removeSystemThemeListener !== null) {
-        removeSystemThemeListener();
-        removeSystemThemeListener = null;
-    }
+    mediaMatches.removeEventListener("change", systemThemeOnChange);
 
     if (newTheme === "system") {
-        removeSystemThemeListener = addSystemThemeListener(() => {
-            onMessage({ type: "APPLY_THEME", theme: getSystemColorTheme() });
-        });
+        mediaMatches.addEventListener("change", systemThemeOnChange);
     }
-    newColor = newTheme === "system" ? getSystemColorTheme() : newTheme;
+
+    const newColor = newTheme === "system" ? getSystemColorTheme() : newTheme;
 
     if (newColor === oldColor) {
         return;

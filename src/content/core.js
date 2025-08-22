@@ -560,11 +560,6 @@ function observe(target) {
     observers.push(observer);
 }
 
-export function addSystemThemeListener(callback) {
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener("change", callback);
-    return () => window.matchMedia('(prefers-color-scheme: dark)').removeEventListener("change", callback);
-}
-
 export function cleanInjectedDarkTheme() {
     observedRoots.forEach(root => {
         if (!(root instanceof ShadowRoot)) {
