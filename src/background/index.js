@@ -14,24 +14,11 @@ async function getActiveTab() {
     return tabs[0];
 }
 
-async function getAllRelatedTabsWithActiveTab() {
-    const activeTab = await getActiveTab();
-    const hostname = extractHostnameByUrl(activeTab.url);
-    const allTabs = await browser.tabs.query({});
-    return allTabs.filter(tab => {
-        if (!tab.url) return false;
-        return extractHostnameByUrl(tab.url) === hostname;
-    });
-}
-
-async function setTabTheme(theme) {
-    const tabs = await getAllRelatedTabsWithActiveTab();
-    await Promise.all(tabs.map(tab => browser.tabs.sendMessage(tab.id, { theme })));
-}
-
 function getKey(hostname, keyName) {
     return hostname + "_" + keyName;
 }
+
+const themeType = ["light", "dark", "system"];
 
 browser.runtime.onMessage.addListener((message, _, sendResponse) => {
     if (message.type === "QUERY_THEME") {
@@ -40,7 +27,7 @@ browser.runtime.onMessage.addListener((message, _, sendResponse) => {
 
         localStorage.get(key).then(config => {
             const theme = config[key];
-            if (["light", "dark", "system"].includes(theme)) {
+            if (theme.includes(theme)) {
                 sendResponse(theme);
             } else {
                 return Promise.reject();
@@ -49,17 +36,27 @@ browser.runtime.onMessage.addListener((message, _, sendResponse) => {
             localStorage.set({ [key]: "light" });
             sendResponse("light");
         });
-        return true;
     }
 
     if (message.type === "APPLY_THEME") {
+        if (!themeType.includes(message.theme)) {
+            message.theme = "light";
+        }
         getActiveTab().then(tab => {
             const hostname = extractHostnameByUrl(tab.url);
             const key = getKey(hostname, "theme");
-            setTabTheme(message.theme);
-            localStorage.set({ [key]: message.theme });
-            sendResponse("ok");
+            browser.tabs.sendMessage(tab.id, { type: "APPLY_THEME", theme: message.theme }).then(() => {
+                localStorage.set({ [key]: message.theme });
+            }).catch(() => { });
+        }).catch((reason) => {
+            console.error("getActiveTab error reason:", reason);
         });
-        return true;
     }
+
+    return true;
+});
+
+browser.tabs.onActivated.addListener((activeInfo) => {
+    browser.tabs.sendMessage(activeInfo.tabId, { type: "ONACTIVE" }).catch(() => { });
+    return true;
 });

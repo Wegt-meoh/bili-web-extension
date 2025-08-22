@@ -2,7 +2,7 @@ import { injectBasicStyle } from "./basicStyle";
 import { CLASS_PREFIX } from "./const";
 import { addSystemThemeListener, cleanInjectedDarkTheme, setupDynamicDarkTheme } from "./core";
 import { injectEarlyStyle } from "./early";
-import { getSystemColorTheme } from "./utils";
+import { getSystemColorTheme, Logger } from "./utils";
 
 if (typeof browser === 'undefined') {
     // eslint-disable-next-line
@@ -13,12 +13,12 @@ let removeSystemThemeListener = null;
 let oldTheme = "";
 let oldColor = "";
 
-async function onMessage(message) {
+async function applyTheme(newTheme) {
     // newTheme: 'light' | 'dark' | 'system'
-    let { theme: newTheme } = message;
 
     if (!["light", "dark", "system"].includes(newTheme)) {
-        throw new Error("onMessage got unexpected data", message);
+        Logger.err("apply got unexpected data", newTheme);
+        newTheme = "light";
     }
 
     let newColor = "";
@@ -35,7 +35,7 @@ async function onMessage(message) {
 
     if (newTheme === "system") {
         removeSystemThemeListener = addSystemThemeListener(() => {
-            onMessage({ theme: getSystemColorTheme() });
+            onMessage({ type: "APPLY_THEME", theme: getSystemColorTheme() });
         });
     }
     newColor = newTheme === "system" ? getSystemColorTheme() : newTheme;
@@ -63,6 +63,30 @@ async function onMessage(message) {
             break;
         default:
     }
+
+}
+
+async function onMessage(message) {
+    const { type, theme } = message;
+
+    switch (type) {
+        case "APPLY_THEME":
+            await applyTheme(theme);
+            break;
+        case "ONACTIVE":
+            await onMessage({ type: "APPLY_THEME", theme: await queryTheme() });
+            break;
+        default:
+    }
+}
+
+async function queryTheme() {
+    try {
+        return await browser.runtime.sendMessage({ type: "QUERY_THEME", hostname: location.hostname });
+    } catch (error) {
+        Logger.err("got an error when query theme", error);
+        return "light";
+    }
 }
 
 
@@ -70,8 +94,8 @@ injectBasicStyle();
 injectEarlyStyle();
 
 document.addEventListener("DOMContentLoaded", async () => {
-    const theme = await browser.runtime.sendMessage({ type: "QUERY_THEME", hostname: location.hostname });
+    const theme = await queryTheme();
     browser.runtime.onMessage.addListener(onMessage);
-    await onMessage({ theme });
+    await onMessage({ type: "APPLY_THEME", theme });
     document.querySelectorAll("." + CLASS_PREFIX + "-early").forEach(e => e.remove());
 });
