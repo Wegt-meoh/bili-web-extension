@@ -45,22 +45,16 @@ async function applyTheme(newTheme) {
     }
     oldColor = newColor;
 
-    const bgDiv = document.querySelector(".bg");
-
     switch (newColor) {
-        case "light":
+        case "light": {
             cleanInjectedDarkTheme();
-            if (bgDiv) {
-                bgDiv.setAttribute("style", bgDiv.getAttribute("style")?.replace("bg_dark.png", "bg.png"));
-            }
             break;
-        case "dark":
+        }
+        case "dark": {
             cleanInjectedDarkTheme();
             await setupDynamicDarkTheme(document);
-            if (bgDiv) {
-                bgDiv.setAttribute("style", bgDiv.getAttribute("style")?.replace("bg.png", "bg_dark.png"));
-            }
             break;
+        }
         default:
     }
 
@@ -72,6 +66,7 @@ async function onMessage(message) {
     switch (type) {
         case "APPLY_THEME":
             await applyTheme(theme);
+            handleBilibiliBackgroundImage(theme === "system" ? getSystemColorTheme() : theme);
             break;
         case "ONACTIVE":
             await onMessage({ type: "APPLY_THEME", theme: await queryTheme() });
@@ -86,6 +81,24 @@ async function queryTheme() {
     } catch (error) {
         Logger.err("got an error when query theme", error);
         return "light";
+    }
+}
+
+function handleBilibiliBackgroundImage(theme) {
+    if (!location.hostname.includes("bilibili.com")) {
+        return;
+    }
+
+    const bgDiv = document.querySelector("#app .bg");
+    const backgroundImageUrl = "url(https://i0.hdslb.com/bfs/static/stone-free/dyn-home/assets/bg.png@1c.avif);";
+    const darkBackgroundImageUrl = "url(https://i0.hdslb.com/bfs/static/stone-free/dyn-home/assets/bg_dark.png@1c.avif);";
+    if (!bgDiv) {
+        return;
+    }
+    if (theme === "light") {
+        bgDiv.setAttribute("style", "background-image:" + backgroundImageUrl);
+    } else {
+        bgDiv.setAttribute("style", "background-image:" + darkBackgroundImageUrl);
     }
 }
 
