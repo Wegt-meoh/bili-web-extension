@@ -315,7 +315,11 @@ async function getHtmlLinkElementData(linkElement) {
         while (count <= 5) {
             try {
                 count += 1;
-                const resp = await fetch(href);
+                const url = new URL(href);
+                const resp = await fetch(url, {
+                    cache: "force-cache",
+                    referrer: location.origin,
+                });
                 return await resp.text();
             } catch (error) {
                 Logger.log(error);
