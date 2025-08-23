@@ -25,7 +25,8 @@
             "matches": [
                 "*://*/*"
             ],
-            "run_at": "document_start"
+            "run_at": "document_start",
+            "all_frames": true
         },
         {
             "js":[
@@ -34,7 +35,8 @@
             "matches":[
                 "*://*.bilibili.com/*"
             ],
-            "run_at":"document_start"
+            "run_at":"document_start",
+            "all_frames":true
         }
     ],
     "background": {
