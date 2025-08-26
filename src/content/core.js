@@ -320,7 +320,7 @@ async function getHtmlLinkElementData(linkElement) {
                     cache: "force-cache",
                     referrer: location.origin,
                 });
-                return await resp.text();
+                return resp.text();
             } catch (error) {
                 Logger.log(error);
                 return new Promise((res) => {
@@ -333,12 +333,13 @@ async function getHtmlLinkElementData(linkElement) {
         return "";
     };
 
-    if (linkElement instanceof HTMLLinkElement && typeof linkElement.href === "string" && linkElement.href.length > 0) {
+    if (linkElement instanceof HTMLLinkElement && typeof linkElement.href === "string") {
         let data = readCssFetchCache(linkElement.href);
-        if (!data) {
+        if (data === null) {
             data = await fetchLatest(linkElement.href);
         }
         writeCssFetchCache(linkElement.href, data);
+        if (data === null) return "";
         return data;
     }
     return "";
@@ -413,14 +414,38 @@ function handleInlineStyle(element) {
     element.setAttribute("style", cssDeclarationToText([...cssRules, ...modifiedRules]));
 }
 
+function getCssText(styleElement) {
+    if (!(styleElement instanceof HTMLStyleElement) && !(styleElement instanceof SVGStyleElement)) {
+        return "";
+    }
+
+    if (styleElement.textContent !== null && styleElement.textContent.trim().length > 0) {
+        return styleElement.textContent;
+    }
+
+    const cssRules = getCssRules(styleElement);
+    if (cssRules === null) return "";
+    let cssText = "";
+    for (let cssRule of cssRules) {
+        cssText += cssRule.cssText;
+    }
+    return cssText;
+}
+
 async function createOrUpdateStyleElement(cssElement) {
     if (!(cssElement instanceof HTMLStyleElement) && !(cssElement instanceof HTMLLinkElement) && !(cssElement instanceof SVGStyleElement)) {
         Logger.err("cssElement must be HTMLStyleElement or HTMLLinkElment or SVGStyleElement but got", cssElement);
         return;
     }
 
-    const cssRules = parseCssStyleSheet(cssElement instanceof HTMLLinkElement ? await getHtmlLinkElementData(cssElement) : cssElement.textContent);
-    const modifiedRules = generateModifiedRules(cssRules, cssElement.getRootNode());
+    let cssText;
+    if (cssElement instanceof HTMLLinkElement) {
+        cssText = await getHtmlLinkElementData(cssElement);
+    } else {
+        cssText = getCssText(cssElement);
+    }
+    const parsedCssRules = parseCssStyleSheet(cssText);
+    const modifiedRules = generateModifiedRules(parsedCssRules, cssElement.getRootNode());
     cssElement._relatedStyle?.remove();
     const injectedStyleElem = document.createElement("style");
     injectedStyleElem.classList.add(CLASS_PREFIX);
@@ -528,13 +553,10 @@ function observeStyleElement(styleElement) {
     observedStyleElement.add(styleElement);
 
     const observer = new MutationObserver((mutations) => {
-        for (const { type } of mutations) {
-            if (type === "childList" || type === "characterData") {
-                createOrUpdateStyleElement(styleElement);
-            }
-        }
+        console.log("style element observe on change");
+        createOrUpdateStyleElement(styleElement);
     });
-    observer.observe(styleElement, { childList: true, subtree: true, characterData: true });
+    observer.observe(styleElement, { childList: true, subtree: true, characterData: true, attributes: true });
     observers.push(observer);
 }
 
