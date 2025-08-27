@@ -242,6 +242,7 @@ function handleRules(rules, computedStyle, computedStyleMap, selectorText) {
     rules.forEach(rule => {
         try {
             const { prop, value, important } = rule;
+            if (typeof prop !== "string" || typeof value !== "string" || typeof important !== "boolean") return;
             // handle the definition of css variable
             if (/^--[\w-_]+[\w\d-_]*/.test(prop) && isOtherColorCssVar(prop, computedStyleMap[selectorText])) {
                 const relatedProp = ["background", "border", "color"];
