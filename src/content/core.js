@@ -187,7 +187,7 @@ function getNewValue(prop, value, computedStyleMap, selectorText) {
     newValue = newValue.replaceAll(/^\d+,\d+,\d+/g, rgb => handleDirectRgb(prop, rgb));
 
     // handle keyword color
-    newValue = newValue.replaceAll(/inherit|initial/g, keyword => {
+    newValue = newValue.replaceAll(/inherit|initial|white|black/ig, keyword => {
         const type = getCssPropType(prop);
         if (type !== "") {
             return defaultDarkColor[type] || keyword;
