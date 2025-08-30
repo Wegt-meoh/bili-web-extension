@@ -1,18 +1,11 @@
-import { defineConfig } from "vite";
+import { defineConfig } from 'vite';
+import webExtension from 'vite-plugin-web-extension';
 
 export default defineConfig({
-    build: {
-        rollupOptions: {
-            input: {
-                content: "src/content/index.js",
-                video: "src/content/video.js",
-            },
-            output: {
-                entryFileNames: "[name].js",
-                format: "es", // Immediately Invoked Function Expression (works in MV3),
-            },
-        },
-        outDir: "dist",
-    },
+    plugins: [
+        webExtension({
+            manifest: 'manifest.json',
+            browser: 'chrome', // Target browser: 'chrome', 'firefox', etc.
+        }),
+    ],
 });
-

@@ -1,12 +1,7 @@
-import { writeCssFetchCache, readCssFetchCache } from "./cache.js";
 import { extractHSL, extractRGB, extractRgbFromHex, hslToRgb, hslToString, invertHslColor, invertRgbColor, isDarkColor, rgbToHexText, rgbToText } from "./color.js";
 import { CLASS_PREFIX, COLOR_KEYWORDS, defaultDarkColor, IGNORE_SELECTOR, PSEUDO_ELEMENT, STYLE_SELECTOR } from "./const.js";
+import { loadText } from "./network.js";
 import { classNameToSelectorText, cssBlocksToText, cssDeclarationToText, getStyleSheetText, Logger, parseCssStyleSheet, parseStyleAttribute } from "./utils.js";
-
-if (typeof browser === 'undefined') {
-    // eslint-disable-next-line
-    var browser = chrome;
-}
 
 function isFontsGoogleApiStyle(element) {
     if (typeof element.href !== "string") {
@@ -311,39 +306,17 @@ async function getHtmlLinkElementData(linkElement) {
         return "";
     }
 
-    const fetchLatest = async (href) => {
-        let count = 0;
-        while (count <= 5) {
-            try {
-                count += 1;
-                const url = new URL(href);
-                const resp = await fetch(url, {
-                    cache: "force-cache",
-                    referrer: location.origin,
-                });
-                return resp.text();
-            } catch (error) {
-                Logger.log(error);
-                return new Promise((res) => {
-                    setTimeout(() => {
-                        res(fetchLatest());
-                    }, 2000);
-                });
-            }
-        }
-        return "";
-    };
+    const url = linkElement.sheet?.href;
 
-    if (linkElement instanceof HTMLLinkElement && typeof linkElement.href === "string") {
-        let data = readCssFetchCache(linkElement.href);
-        if (data === null) {
-            data = await fetchLatest(linkElement.href);
-        }
-        writeCssFetchCache(linkElement.href, data);
-        if (data === null) return "";
+    if (!url) return "";
+
+    try {
+        const data = await loadText(url, location.origin);
         return data;
+    } catch (err) {
+        Logger.err("catch error when loadText", err);
+        return "";
     }
-    return "";
 }
 
 function getAllInlineStyleElements(element, result = []) {
@@ -553,11 +526,10 @@ function observeStyleElement(styleElement) {
 
     observedStyleElement.add(styleElement);
 
-    const observer = new MutationObserver((mutations) => {
-        console.log("style element observe on change");
+    const observer = new MutationObserver(() => {
         createOrUpdateStyleElement(styleElement);
     });
-    observer.observe(styleElement, { childList: true, subtree: true, characterData: true, attributes: true });
+    observer.observe(styleElement, { childList: true, subtree: true, characterData: true });
     observers.push(observer);
 }
 

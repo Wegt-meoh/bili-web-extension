@@ -1,3 +1,4 @@
+import { MessageType } from "../utils/message";
 import { CLASS_PREFIX } from "./const";
 import { getSystemColorTheme } from "./utils";
 
@@ -16,7 +17,7 @@ export async function injectEarlyStyle() {
         var browser = chrome;
     }
 
-    const theme = await browser.runtime.sendMessage({ type: "QUERY_THEME", hostname: location.hostname });
+    const theme = await browser.runtime.sendMessage({ type: MessageType.QUERY_THEME, hostname: location.hostname });
     if (theme === "light" || (theme === "system" && getSystemColorTheme() === "light")) return;
 
     const styleEle = document.createElement('style');

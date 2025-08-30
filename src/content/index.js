@@ -1,4 +1,6 @@
+import { MessageType } from "../utils/message";
 import { injectBasicStyle } from "./basicStyle";
+import { handleBilibiliBackgroundImage, handleBilibiliVideo } from "./bilibili";
 import { CLASS_PREFIX } from "./const";
 import { cleanInjectedDarkTheme, setupDynamicDarkTheme } from "./core";
 import { injectEarlyStyle } from "./early";
@@ -14,7 +16,7 @@ let oldColor = "";
 const mediaMatches = window.matchMedia('(prefers-color-scheme: dark)');
 
 function systemThemeOnChange() {
-    onMessage({ type: "APPLY_THEME", theme: "system" });
+    onMessage({ type: MessageType.APPLY_THEME, theme: "system" });
 }
 
 async function applyTheme(newTheme) {
@@ -56,12 +58,12 @@ async function onMessage(message) {
     const { type, theme } = message;
 
     switch (type) {
-        case "APPLY_THEME":
+        case MessageType.APPLY_THEME:
             await applyTheme(theme);
             handleBilibiliBackgroundImage(theme === "system" ? getSystemColorTheme() : theme);
             break;
-        case "ONACTIVE":
-            await onMessage({ type: "APPLY_THEME", theme: await queryTheme() });
+        case MessageType.ONACTIVE:
+            await onMessage({ type: MessageType.APPLY_THEME, theme: await queryTheme() });
             break;
         default:
     }
@@ -69,38 +71,20 @@ async function onMessage(message) {
 
 async function queryTheme() {
     try {
-        return await browser.runtime.sendMessage({ type: "QUERY_THEME", hostname: location.hostname });
+        return await browser.runtime.sendMessage({ type: MessageType.QUERY_THEME, hostname: location.hostname });
     } catch (error) {
         Logger.err("got an error when query theme", error);
         return "light";
     }
 }
 
-function handleBilibiliBackgroundImage(theme) {
-    if (!location.hostname.includes("bilibili.com")) {
-        return;
-    }
-
-    const bgDiv = document.querySelector("#app .bg");
-    const backgroundImageUrl = "url(https://i0.hdslb.com/bfs/static/stone-free/dyn-home/assets/bg.png@1c.avif);";
-    const darkBackgroundImageUrl = "url(https://i0.hdslb.com/bfs/static/stone-free/dyn-home/assets/bg_dark.png@1c.avif);";
-    if (!bgDiv) {
-        return;
-    }
-    if (theme === "light") {
-        bgDiv.setAttribute("style", "background-image:" + backgroundImageUrl);
-    } else {
-        bgDiv.setAttribute("style", "background-image:" + darkBackgroundImageUrl);
-    }
-}
-
-
 injectBasicStyle();
 injectEarlyStyle();
 
 document.addEventListener("DOMContentLoaded", async () => {
+    handleBilibiliVideo();
     const theme = await queryTheme();
     browser.runtime.onMessage.addListener(onMessage);
-    await onMessage({ type: "APPLY_THEME", theme });
+    await onMessage({ type: MessageType.APPLY_THEME, theme });
     document.querySelectorAll("." + CLASS_PREFIX + "-early").forEach(e => e.remove());
 });

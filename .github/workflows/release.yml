@@ -28,14 +28,7 @@ jobs:
         shell: bash
         run: |
           TAG_NAME=${GITHUB_REF#refs/tags/}
-          mkdir extension
-          cp -r ./images extension
-          cp -r ./src extension
-          rm -rf ./extension/src/content
-          cp -r ./dist extension
-          cp -r ./_locales extension
-          cp manifest.json extension
-          zip -r extension-${TAG_NAME}.zip extension/
+          zip -r extension-${TAG_NAME}.zip dist/
           echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_ENV
 
       - name: Upload Binary as Artifact

@@ -1,10 +1,12 @@
+import { MessageType } from "../utils/message";
+
 if (typeof browser === 'undefined') {
     // eslint-disable-next-line
     var browser = chrome;
 }
 
 function setTabTheme(theme) {
-    browser.runtime.sendMessage({ type: "APPLY_THEME", theme });
+    browser.runtime.sendMessage({ type: MessageType.APPLY_THEME, theme });
 }
 
 async function getActiveTab() {
@@ -16,7 +18,7 @@ function extractHostnameByUrl(url) {
     return (new URL(url)).hostname;
 }
 
-await(async function() {
+(async function() {
     // add listener
     const switchButton = document.querySelector('.switch');
 
@@ -25,7 +27,7 @@ await(async function() {
     // load config
     const activeTab = await getActiveTab();
     const theme = await browser.runtime.sendMessage({
-        type: "QUERY_THEME", hostname: extractHostnameByUrl(activeTab.url)
+        type: MessageType.QUERY_THEME, hostname: extractHostnameByUrl(activeTab.url)
     });
     switchButton.textContent = theme;
     switchButton.addEventListener('click', () => {
