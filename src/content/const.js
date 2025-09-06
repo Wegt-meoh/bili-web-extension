@@ -30,6 +30,6 @@ export const PSEUDO_CLASSES = /:(?:hover|active|focus|visited|link|target|checke
 export const PSEUDO_ELEMENT = /::(?:after|before|first-letter|first-line|selection|backdrop|marker|placeholder|cue|part\([^)]+\)|slotted\([^)]+\)|grammar-error|spelling-error)(?![^\s{]*[^{])/gi;
 export const defaultDarkColor = {
     bg: "rgb(24,26,27)",
-    border: "rgb(24,26,27)",
+    border: "rgb(34,36,37)",
     text: "rgb(255,255,255)"
 };
