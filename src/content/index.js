@@ -1,9 +1,9 @@
 import { MessageType } from "../utils/message";
-import { injectBasicStyle } from "./basicStyle";
 import { handleBilibiliBackgroundImage, handleBilibiliVideo } from "./bilibili";
 import { CLASS_PREFIX } from "./const";
 import { cleanInjectedDarkTheme, setupDynamicDarkTheme } from "./core";
 import { injectEarlyStyle } from "./early";
+import { injectFallbackStyle } from "./fallback";
 import { getSystemColorTheme, Logger } from "./utils";
 
 if (typeof browser === 'undefined') {
@@ -46,6 +46,7 @@ async function applyTheme(newTheme) {
         }
         case "dark": {
             cleanInjectedDarkTheme();
+            injectFallbackStyle();
             await setupDynamicDarkTheme(document);
             break;
         }
@@ -78,7 +79,6 @@ async function queryTheme() {
     }
 }
 
-injectBasicStyle();
 injectEarlyStyle();
 
 document.addEventListener("DOMContentLoaded", async () => {

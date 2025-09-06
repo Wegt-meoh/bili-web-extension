@@ -1,31 +1,13 @@
-import { MessageType } from "../utils/message";
-import { CLASS_PREFIX } from "./const";
-import { addCssPrefix } from "./core";
-import { getSystemColorTheme } from "./utils";
-
+import { defaultDarkColor } from "./const";
+import { insertHeadStyle } from "./utils";
 const FALLBACK_STYLE = `
-.bili-comments-bottom-fixed-wrapper>div{
-    background-color: var(${addCssPrefix("bg", "--bg1")}) !important;
-    border-top-color: var(${addCssPrefix("border", "--graph_bg_thick")}) !important;
-}
-
-body{
-    color: #fff;
-    background: rgb(24,26,27);
+input,textarea,body{
+    color: ${defaultDarkColor.text};
+    background-color: ${defaultDarkColor.bg};
+    border-color: ${defaultDarkColor.border};
 }
 `;
 
-export async function injectFallbackStyle(root) {
-    if (typeof browser === 'undefined') {
-        // eslint-disable-next-line
-        var browser = chrome;
-    }
-
-    const theme = await browser.runtime.sendMessage({ type: MessageType.QUERY_THEME, hostname: location.hostname });
-    if (theme === "light" || (theme === "system" && getSystemColorTheme() === "light")) return;
-
-    const styleEle = document.createElement('style');
-    styleEle.classList.add(`${CLASS_PREFIX}-fallback`);
-    styleEle.textContent = FALLBACK_STYLE;
-    root.appendChild(styleEle);
+export function injectFallbackStyle() {
+    insertHeadStyle(FALLBACK_STYLE, "start");
 }

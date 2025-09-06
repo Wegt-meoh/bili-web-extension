@@ -1,4 +1,5 @@
 import * as csstree from "css-tree";
+import { CLASS_PREFIX } from "./const";
 
 export function parseStyleAttribute(text) {
     const ast = csstree.parse(text, { context: "declarationList" });
@@ -96,4 +97,28 @@ export class Logger {
     static err(...reasons) {
         console.error("bili-web-extension: catch err", ...reasons);
     }
+}
+
+/**
+ * @param {string} css
+ * @param {"start"|"end"} position
+ */
+export function insertHeadStyle(css, position) {
+    const styleEle = document.createElement('style');
+    styleEle.textContent = css;
+    styleEle.classList.add(CLASS_PREFIX, CLASS_PREFIX + "-fallback");
+    const insert = () => {
+        document.head.insertAdjacentElement(position === "start" ? "afterbegin" : "afterend", styleEle);
+    };
+    if (!document.head) {
+        const headObserver = new MutationObserver(() => {
+            if (document.head) {
+                headObserver.disconnect();
+                insert();
+            }
+        });
+        headObserver.observe(document.documentElement, { childList: true });
+        return;
+    }
+    insert();
 }
