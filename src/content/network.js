@@ -1,6 +1,5 @@
 import { MessageType } from "../utils/message";
 import { readCssFetchCache, writeCssFetchCache } from "./cache";
-import { Logger } from "./utils";
 
 if (typeof browser === 'undefined') {
     // eslint-disable-next-line
