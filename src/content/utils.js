@@ -102,11 +102,12 @@ export class Logger {
 /**
  * @param {string} css
  * @param {"start"|"end"} position
+ * @param {string} className
  */
-export function insertHeadStyle(css, position) {
+export function insertHeadStyle(css, position, className) {
     const styleEle = document.createElement('style');
     styleEle.textContent = css;
-    styleEle.classList.add(CLASS_PREFIX, CLASS_PREFIX + "-fallback");
+    styleEle.classList.add(CLASS_PREFIX, className);
     const insert = () => {
         document.head.insertAdjacentElement(position === "start" ? "afterbegin" : "afterend", styleEle);
     };

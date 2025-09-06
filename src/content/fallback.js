@@ -1,4 +1,4 @@
-import { defaultDarkColor } from "./const";
+import { CLASS_PREFIX, defaultDarkColor } from "./const";
 import { insertHeadStyle } from "./utils";
 const FALLBACK_STYLE = `
 input,textarea,body{
@@ -9,5 +9,5 @@ input,textarea,body{
 `;
 
 export function injectFallbackStyle() {
-    insertHeadStyle(FALLBACK_STYLE, "start");
+    insertHeadStyle(FALLBACK_STYLE, "start", CLASS_PREFIX + "-fallback");
 }
