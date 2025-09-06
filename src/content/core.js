@@ -23,17 +23,17 @@ function shouldManageStyle(element) {
         (element instanceof SVGStyleElement) ||
         (element instanceof HTMLLinkElement &&
             Boolean(element.rel) &&
-            (element.rel.toLowerCase().includes("stylesheet") || element.as.toLowerCase() === "style") &&
-            Boolean(element.href) &&
-            !element.disabled &&
-            (navigator.userAgent.toLowerCase().includes("firefox") ?
-                !element.href.startsWith("moz-extension://") : true
-            ) &&
-            !isFontsGoogleApiStyle(element)
-        )
-    ) &&
+            (element.rel.toLowerCase().includes("stylesheet") &&
+                Boolean(element.href) &&
+                !element.disabled &&
+                (navigator.userAgent.toLowerCase().includes("firefox") ?
+                    !element.href.startsWith("moz-extension://") : true
+                ) &&
+                !isFontsGoogleApiStyle(element)
+            )
+        ) &&
         element.media.toLowerCase() !== "print" &&
-        !element.classList.contains("stylus");
+        !element.classList.contains("stylus"));
 }
 
 async function injectInDeep(target) {
@@ -306,9 +306,9 @@ async function getHtmlLinkElementData(linkElement) {
         return "";
     }
 
-    const url = linkElement.sheet?.href;
+    let url = linkElement.href;
 
-    if (!url) return "";
+    if (url === "") return "";
 
     try {
         const data = await loadText(url, location.origin);
@@ -349,10 +349,6 @@ async function injectDynamicTheme(target) {
     for (let cssElement of cssElements) {
         if (cssElement instanceof HTMLStyleElement) {
             observeStyleElement(cssElement);
-        }
-
-        if (cssElement instanceof HTMLLinkElement) {
-            observeLinkElement(cssElement);
         }
 
         // ensure handle style data after observer setup
@@ -406,6 +402,8 @@ function getCssText(styleElement) {
     return cssText;
 }
 
+const relatedStyleMap = new Map();
+
 async function createOrUpdateStyleElement(cssElement) {
     if (!(cssElement instanceof HTMLStyleElement) && !(cssElement instanceof HTMLLinkElement) && !(cssElement instanceof SVGStyleElement)) {
         Logger.err("cssElement must be HTMLStyleElement or HTMLLinkElment or SVGStyleElement but got", cssElement);
@@ -420,13 +418,22 @@ async function createOrUpdateStyleElement(cssElement) {
     }
     const parsedCssRules = parseCssStyleSheet(cssText);
     const modifiedRules = generateModifiedRules(parsedCssRules, cssElement.getRootNode());
-    cssElement._relatedStyle?.remove();
+
+    const relatedStyleElement = relatedStyleMap.get(cssElement);
+    if (relatedStyleElement && relatedStyleElement instanceof HTMLStyleElement) {
+        relatedStyleMap.delete(cssElement);
+        relatedStyleElement.remove();
+    }
+
+    if (modifiedRules.length === 0) return;
+
     const injectedStyleElem = document.createElement("style");
     injectedStyleElem.classList.add(CLASS_PREFIX);
     injectedStyleElem.type = "text/css";
+    injectedStyleElem.media = "screen";
     injectedStyleElem.textContent = cssBlocksToText(modifiedRules);
     cssElement.insertAdjacentElement('afterend', injectedStyleElem);
-    cssElement._relatedStyle = injectedStyleElem;
+    relatedStyleMap.set(cssElement, injectedStyleElem);
 }
 
 function handleAdoptedStyle(docum) {
@@ -490,30 +497,9 @@ async function setupDynamicDarkThemeForShadowRoot(shadowRoot) {
 
 const observedStyleElement = new Set();
 
-function observeLinkElement(linkElement) {
-    if (!(linkElement instanceof HTMLLinkElement)) {
-        Logger.err("element must be HTMLLinkElement but got", linkElement);
-        return;
-    }
-
-    if (observedStyleElement.has(linkElement)) {
-        return;
-    }
-
-    observedStyleElement.add(linkElement);
-
-    const observer = new MutationObserver((mutations) => {
-        for (const mutation of mutations) {
-            if (mutation.type === "attributes" && mutation.attributeName === "href") {
-                createOrUpdateStyleElement(linkElement);
-            }
-        }
-        createOrUpdateStyleElement(linkElement);
-    });
-    observer.observe(linkElement, { attributes: true });
-    observers.push(observer);
-}
-
+/**
+ * @param {HTMLStyleElement} styleElement
+ */
 function observeStyleElement(styleElement) {
     if (!(styleElement instanceof HTMLStyleElement)) {
         Logger.err("styleElement must be HTMLStyleElement but got", styleElement);
@@ -529,16 +515,34 @@ function observeStyleElement(styleElement) {
     const observer = new MutationObserver(() => {
         createOrUpdateStyleElement(styleElement);
     });
-    observer.observe(styleElement, { childList: true, subtree: true, characterData: true });
+    observer.observe(styleElement, { childList: true, characterData: true, subtree: true });
     observers.push(observer);
 }
 
 const observedRoots = new Set();
 const observers = [];
 
+/**
+ * @param {HTMLElement|ShadowRoot} target
+*/
 function observe(target) {
-    const observer = new MutationObserver((mutations,) => {
-        for (let { type, addedNodes } of mutations) {
+    const rootObserver = new MutationObserver((mutations) => {
+        for (const { type, attributeName, target, addedNodes, removedNodes } of mutations) {
+            if (type === "attributes") {
+                const { classList } = target;
+                if (classList instanceof DOMTokenList && classList.contains(CLASS_PREFIX)) {
+                    continue;
+                }
+                if (attributeName === "disabled") {
+                    const relatedStyle = relatedStyleMap.get(target);
+                    if (relatedStyle instanceof HTMLStyleElement && typeof target.disabled === "boolean") {
+                        relatedStyle.disabled = target.disabled;
+                    }
+                } else if (attributeName === "rel") {
+                    injectDynamicTheme(target);
+                }
+            }
+
             if (type === "childList") {
                 for (let addedNode of addedNodes) {
                     const { classList } = addedNode;
@@ -547,15 +551,36 @@ function observe(target) {
                     }
                     injectDynamicTheme(addedNode);
                 }
+
+                for (let removedNode of removedNodes) {
+                    const { classList } = removedNode;
+                    if (classList instanceof DOMTokenList && classList.contains(CLASS_PREFIX)) {
+                        continue;
+                    }
+                    if (relatedStyleMap.has(removedNode)) {
+                        const styleElement = relatedStyleMap.get(removedNode);
+                        if (styleElement instanceof HTMLStyleElement) {
+                            styleElement.remove();
+                        }
+                        relatedStyleMap.delete(removedNode);
+                    }
+                }
+
             }
         }
     });
-
-    observer.observe(target, { childList: true, subtree: true });
-    observers.push(observer);
+    rootObserver.observe(target, { childList: true, subtree: true, attributeFilter: ["rel", "disabled"] });
+    observers.push(rootObserver);
 }
 
 export function cleanInjectedDarkTheme() {
+    relatedStyleMap.forEach((v) => {
+        if (v instanceof HTMLStyleElement) {
+            v.remove();
+        }
+    });
+    relatedStyleMap.clear();
+
     observedRoots.forEach(root => {
         if (!(root instanceof ShadowRoot)) {
             root = root.getRootNode();
