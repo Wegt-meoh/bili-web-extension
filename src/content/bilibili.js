@@ -1,3 +1,6 @@
+import { CLASS_PREFIX } from "./const";
+import { insertHeadStyle } from "./utils";
+
 function shouldIgnore() {
     return location.hostname.includes("bilibili.com") ? false : true;
 }
@@ -16,6 +19,17 @@ export function handleBilibiliBackgroundImage(theme) {
     } else {
         bgDiv.setAttribute("style", "background-image:" + darkBackgroundImageUrl);
     }
+}
+
+
+export function insertFixedBilibiliStyle() {
+    if (shouldIgnore()) return;
+    const css = `
+.desktop-download-tip, .palette-button-outer, .floor-single-card, .ad-report, .bgc{
+    display: none;
+}
+`;
+    insertHeadStyle(css, "end", CLASS_PREFIX + "-fix");
 }
 
 export function handleBilibiliVideo() {

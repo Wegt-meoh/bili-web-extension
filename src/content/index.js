@@ -1,5 +1,5 @@
 import { MessageType } from "../utils/message";
-import { handleBilibiliBackgroundImage, handleBilibiliVideo } from "./bilibili";
+import { handleBilibiliBackgroundImage, handleBilibiliVideo, insertFixedBilibiliStyle } from "./bilibili";
 import { CLASS_PREFIX } from "./const";
 import { cleanInjectedDarkTheme, setupDynamicDarkTheme } from "./core";
 import { injectEarlyStyle } from "./early";
@@ -48,6 +48,7 @@ async function applyTheme(newTheme) {
             cleanInjectedDarkTheme();
             injectFallbackStyle();
             await setupDynamicDarkTheme(document);
+            insertFixedBilibiliStyle();
             break;
         }
         default:
