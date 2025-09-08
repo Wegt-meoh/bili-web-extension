@@ -47,11 +47,6 @@ async function injectInDeep(target) {
             await setupDynamicDarkThemeForShadowRoot(t.shadowRoot);
             return true;
         }
-        if (t instanceof HTMLFrameElement) {
-            await setupDynamicDarkTheme(t.contentDocument);
-            return true;
-        }
-
         return false;
     };
 
