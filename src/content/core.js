@@ -373,6 +373,7 @@ function handleInlineStyle(element) {
     const modifiedRules = handleRules(cssRules, getComputedStyle(element));
 
     if (modifiedRules.length === 0) {
+        originalInlineStyle.delete(element);
         return;
     }
 
