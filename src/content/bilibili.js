@@ -5,30 +5,20 @@ function shouldIgnore() {
     return location.hostname.includes("bilibili.com") ? false : true;
 }
 
-export function handleBilibiliBackgroundImage(theme) {
-    if (shouldIgnore()) return;
-
-    const bgDiv = document.querySelector("#app .bg");
-    const backgroundImageUrl = "url(https://i0.hdslb.com/bfs/static/stone-free/dyn-home/assets/bg.png@1c.avif);";
-    const darkBackgroundImageUrl = "url(https://i0.hdslb.com/bfs/static/stone-free/dyn-home/assets/bg_dark.png@1c.avif);";
-    if (!bgDiv) {
-        return;
-    }
-    if (theme === "light") {
-        bgDiv.setAttribute("style", "background-image:" + backgroundImageUrl);
-    } else {
-        bgDiv.setAttribute("style", "background-image:" + darkBackgroundImageUrl);
-    }
-}
-
-
 export function insertFixedBilibiliStyle() {
     if (shouldIgnore()) return;
     const css = `
-.desktop-download-tip, .palette-button-outer, .floor-single-card, .ad-report, .bgc{
-    display: none;
-}
-`;
+    .desktop-download-tip, .palette-button-outer, .floor-single-card, .ad-report, .bgc{
+        display: none;
+    }
+    #app>.message-bg{
+        background-image: url("//i0.hdslb.com/bfs/seed/jinkela/short/message/img/dark_bg.png@1c.webp") !important;
+    }
+    #app>.bg{
+        background-image: url("//i0.hdslb.com/bfs/static/stone-free/dyn-home/assets/bg_dark.png@1c.avif") !important;
+    }
+    `;
+
     insertHeadStyle(css, "end", CLASS_PREFIX + "-fix");
 }
 

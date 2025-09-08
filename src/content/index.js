@@ -1,5 +1,5 @@
 import { MessageType } from "../utils/message";
-import { handleBilibiliBackgroundImage, handleBilibiliVideo, insertFixedBilibiliStyle } from "./bilibili";
+import { handleBilibiliVideo, insertFixedBilibiliStyle } from "./bilibili";
 import { CLASS_PREFIX } from "./const";
 import { cleanInjectedDarkTheme, setupDynamicDarkTheme } from "./core";
 import { injectEarlyStyle } from "./early";
@@ -33,9 +33,8 @@ async function applyTheme(newTheme) {
 
     const newColor = newTheme === "system" ? getSystemColorTheme() : newTheme;
 
-    if (newColor === oldColor) {
-        return;
-    }
+    if (newColor === oldColor) return;
+
     oldColor = newColor;
 
     switch (newColor) {
@@ -51,7 +50,6 @@ async function applyTheme(newTheme) {
         }
         default:
     }
-
 }
 
 async function onMessage(message) {
@@ -60,7 +58,6 @@ async function onMessage(message) {
     switch (type) {
         case MessageType.APPLY_THEME:
             await applyTheme(theme);
-            handleBilibiliBackgroundImage(theme === "system" ? getSystemColorTheme() : theme);
             break;
         case MessageType.ONACTIVE:
             await onMessage({ type: MessageType.APPLY_THEME, theme: await queryTheme() });
