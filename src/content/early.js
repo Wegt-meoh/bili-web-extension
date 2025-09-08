@@ -4,10 +4,10 @@ import { getSystemColorTheme } from "./utils";
 
 const EARLY_STYLE = `
 *{
-color: #fff !important;
-background: rgb(24,26,27) !important;
-border-color: rgb(24,26,27) !important;
-box-shadow:0 0 8px rgb(24,26,27) !important;
+    color: #fff !important;
+    background: rgb(24,26,27) !important;
+    border-color: rgb(24,26,27) !important;
+    box-shadow:0 0 8px rgb(24,26,27) !important;
 }
 `;
 

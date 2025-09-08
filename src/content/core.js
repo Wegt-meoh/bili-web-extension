@@ -1,5 +1,6 @@
 import { extractHSL, extractRGB, extractRgbFromHex, hslToRgb, hslToString, invertHslColor, invertRgbColor, isDarkColor, rgbToHexText, rgbToText } from "./color.js";
 import { CLASS_PREFIX, COLOR_KEYWORDS, defaultDarkColor, IGNORE_SELECTOR, PSEUDO_ELEMENT, STYLE_SELECTOR } from "./const.js";
+import { injectUserAgentStyle } from "./fallback.js";
 import { loadText } from "./network.js";
 import { classNameToSelectorText, cssBlocksToText, cssDeclarationToText, getStyleSheetText, Logger, parseCssStyleSheet, parseStyleAttribute } from "./utils.js";
 
@@ -46,7 +47,6 @@ async function injectInDeep(target) {
             await setupDynamicDarkThemeForShadowRoot(t.shadowRoot);
             return true;
         }
-
         if (t instanceof HTMLFrameElement) {
             await setupDynamicDarkTheme(t.contentDocument);
             return true;
@@ -467,6 +467,7 @@ export async function setupDynamicDarkTheme(docum) {
     observedRoots.add(document.documentElement);
 
     try {
+        injectUserAgentStyle();
         handleAdoptedStyle(docum);
         observe(docum.documentElement);
         await injectDynamicTheme(docum.documentElement);

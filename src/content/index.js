@@ -3,7 +3,6 @@ import { handleBilibiliBackgroundImage, handleBilibiliVideo, insertFixedBilibili
 import { CLASS_PREFIX } from "./const";
 import { cleanInjectedDarkTheme, setupDynamicDarkTheme } from "./core";
 import { injectEarlyStyle } from "./early";
-import { injectFallbackStyle } from "./fallback";
 import { getSystemColorTheme, Logger } from "./utils";
 
 if (typeof browser === 'undefined') {
@@ -46,7 +45,6 @@ async function applyTheme(newTheme) {
         }
         case "dark": {
             cleanInjectedDarkTheme();
-            injectFallbackStyle();
             await setupDynamicDarkTheme(document);
             insertFixedBilibiliStyle();
             break;
