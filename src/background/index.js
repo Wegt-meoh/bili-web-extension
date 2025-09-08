@@ -24,52 +24,60 @@ function getKey(hostname, keyName) {
 
 const themeOptions = ["light", "dark", "system"];
 
-browser.runtime.onMessage.addListener((message, _, sendResponse) => {
+async function handleOnMessage(message, sendResponse) {
     switch (message.type) {
         case MessageType.QUERY_THEME: {
             const { hostname } = message;
             const key = getKey(hostname, "theme");
-
-            localStorage.get(key).then(config => {
+            try {
+                const config = await localStorage.get(key);
                 const theme = config[key];
                 if (theme.includes(theme)) {
                     sendResponse(theme);
                 } else {
-                    return Promise.reject();
+                    throw new Error("theme not available");
                 }
-            }).catch(() => {
+            } catch (err) {
                 localStorage.set({ [key]: "light" });
                 sendResponse("light");
-            });
+                Logger.err(err);
+            }
             break;
         }
         case MessageType.APPLY_THEME: {
             if (!themeOptions.includes(message.theme)) {
                 message.theme = "light";
             }
-            getActiveTab().then(tab => {
+            try {
+                const tab = await getActiveTab();
                 const hostname = extractHostnameByUrl(tab.url);
                 const key = getKey(hostname, "theme");
-                browser.tabs.sendMessage(tab.id, { type: MessageType.APPLY_THEME, theme: message.theme }).then(() => {
-                    localStorage.set({ [key]: message.theme });
-                }).catch(() => { });
-            }).catch((reason) => {
-                console.error("getActiveTab error reason:", reason);
-            });
+                await browser.tabs.sendMessage(tab.id, { type: MessageType.APPLY_THEME, theme: message.theme });
+                localStorage.set({ [key]: message.theme });
+            } catch (reason) {
+                Logger.err("getActiveTab error reason:", reason);
+            }
             break;
         }
         case MessageType.FETCH: {
-            const { url, origin } = message;
-            loadAsText(url, origin).then(text => {
+            try {
+                const { url, origin } = message;
+                const text = await loadAsText(url, origin);
                 sendResponse(text);
-            }).catch(err => {
+            } catch (err) {
                 Logger.err("bg fetch failed", err);
                 sendResponse("");
-            });
+            }
             break;
         }
         default:
+            sendResponse("unknown MessageType", message.type);
+            Logger.err("unknown MessageType", message.type);
     }
+}
+
+browser.runtime.onMessage.addListener((message, _, sendResponse) => {
+    handleOnMessage(message, sendResponse);
     return true;
 });
 
