@@ -32,7 +32,7 @@ async function handleOnMessage(message, sendResponse) {
             try {
                 const config = await localStorage.get(key);
                 const theme = config[key];
-                if (theme.includes(theme)) {
+                if (themeOptions.includes(theme)) {
                     sendResponse(theme);
                 } else {
                     throw new Error("theme not available");
