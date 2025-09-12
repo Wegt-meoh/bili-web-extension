@@ -28,6 +28,9 @@ async function handleOnMessage(message, sendResponse) {
     switch (message.type) {
         case MessageType.QUERY_THEME: {
             const { hostname } = message;
+            if (typeof hostname !== "string" || hostname.length === 0) {
+                return;
+            }
             const key = getKey(hostname, "theme");
             try {
                 const config = await localStorage.get(key);
@@ -35,12 +38,11 @@ async function handleOnMessage(message, sendResponse) {
                 if (themeOptions.includes(theme)) {
                     sendResponse(theme);
                 } else {
-                    throw new Error("theme not available");
+                    throw new Error("theme not available hostname is", hostname);
                 }
-            } catch (err) {
+            } catch {
                 localStorage.set({ [key]: "light" });
                 sendResponse("light");
-                Logger.err(err);
             }
             break;
         }

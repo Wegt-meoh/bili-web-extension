@@ -6,7 +6,13 @@ if (typeof browser === 'undefined') {
 }
 
 function setTabTheme(theme) {
-    browser.runtime.sendMessage({ type: MessageType.APPLY_THEME, theme });
+    browser.runtime.sendMessage({ type: MessageType.APPLY_THEME, theme }, () => {
+        // Check for runtime errors
+        if (browser.runtime.lastError) {
+            // Example: Handle "Could not establish connection" or similar errors
+            return;
+        }
+    });
 }
 
 async function getActiveTab() {
