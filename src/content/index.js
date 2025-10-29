@@ -1,5 +1,5 @@
 import { MessageType } from "../utils/message";
-import { handleBilibiliVideo, insertFixedBilibiliStyle } from "./bilibili";
+import { handleBilibiliVideo, insertBasicBilibiliStyle, insertFixedBilibiliStyle } from "./bilibili";
 import { CLASS_PREFIX } from "./const";
 import { cleanInjectedDarkTheme, setupDynamicDarkTheme } from "./core";
 import { injectEarlyStyle } from "./early";
@@ -79,6 +79,7 @@ injectEarlyStyle();
 
 document.addEventListener("DOMContentLoaded", async () => {
     handleBilibiliVideo();
+    insertBasicBilibiliStyle();
     const theme = await queryTheme();
     browser.runtime.onMessage.addListener(onMessage);
     await onMessage({ type: MessageType.APPLY_THEME, theme });

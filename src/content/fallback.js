@@ -15,5 +15,5 @@ const USER_ANGENT_STYLE = `
 `;
 
 export function injectUserAgentStyle() {
-    insertHeadStyle(USER_ANGENT_STYLE, "start", CLASS_PREFIX + "-user-agent");
+    insertHeadStyle(USER_ANGENT_STYLE, "start", [CLASS_PREFIX, CLASS_PREFIX + "-user-agent"]);
 }

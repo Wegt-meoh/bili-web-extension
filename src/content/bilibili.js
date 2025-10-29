@@ -5,12 +5,20 @@ function shouldIgnore() {
     return location.hostname.includes("bilibili.com") ? false : true;
 }
 
+export function insertBasicBilibiliStyle() {
+    if (shouldIgnore()) return;
+    const css = `
+    .recommended-swipe, .desktop-download-tip, .palette-button-outer, .floor-single-card, .ad-report, .bgc{
+        display: none;
+    }
+    `;
+
+    insertHeadStyle(css, "end");
+}
+
 export function insertFixedBilibiliStyle() {
     if (shouldIgnore()) return;
     const css = `
-    .desktop-download-tip, .palette-button-outer, .floor-single-card, .ad-report, .bgc{
-        display: none;
-    }
     #app>.message-bg{
         background-image: url("//i0.hdslb.com/bfs/seed/jinkela/short/message/img/dark_bg.png@1c.webp") !important;
     }
@@ -19,7 +27,7 @@ export function insertFixedBilibiliStyle() {
     }
     `;
 
-    insertHeadStyle(css, "end", CLASS_PREFIX + "-fix");
+    insertHeadStyle(css, "end", [CLASS_PREFIX, CLASS_PREFIX + "-fix"]);
 }
 
 export function handleBilibiliVideo() {
