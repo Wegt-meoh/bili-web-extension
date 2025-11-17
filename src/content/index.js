@@ -44,8 +44,8 @@ async function applyTheme(newTheme) {
         }
         case "dark": {
             cleanInjectedDarkTheme();
-            await setupDynamicDarkTheme(document);
             insertFixedBilibiliStyle();
+            await setupDynamicDarkTheme(document);
             break;
         }
         default:
