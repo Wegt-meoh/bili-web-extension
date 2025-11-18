@@ -1,5 +1,4 @@
 import * as csstree from "css-tree";
-import { CLASS_PREFIX } from "./const";
 
 export function parseStyleAttribute(text) {
     const ast = csstree.parse(text, { context: "declarationList" });
@@ -102,14 +101,14 @@ export class Logger {
 /**
  * @param {string} css
  * @param {"start"|"end"} position
- * @param {string} className
+ * @param {string[]} className
  */
-export function insertHeadStyle(css, position, className) {
+export function insertHeadStyle(css, position, className = []) {
     const styleEle = document.createElement('style');
     styleEle.textContent = css;
-    styleEle.classList.add(CLASS_PREFIX, className);
+    styleEle.classList.add(...className);
     const insert = () => {
-        document.head.insertAdjacentElement(position === "start" ? "afterbegin" : "afterend", styleEle);
+        document.head.insertAdjacentElement(position === "start" ? "afterbegin" : "beforeend", styleEle);
     };
     if (!document.head) {
         const headObserver = new MutationObserver(() => {
