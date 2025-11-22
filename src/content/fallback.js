@@ -2,7 +2,7 @@ import { CLASS_PREFIX, defaultDarkColor } from "./const";
 import { insertHeadStyle } from "./utils";
 const USER_ANGENT_STYLE = `
 @layer{
-    html,body{
+    html{
         color: ${defaultDarkColor.text};
         background-color: ${defaultDarkColor.bg};
         border-color: ${defaultDarkColor.border};
