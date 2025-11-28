@@ -296,11 +296,6 @@ function getCssRules(style) {
 }
 
 async function getHtmlLinkElementData(linkElement) {
-    if (!(linkElement instanceof HTMLLinkElement)) {
-        Logger.err("element must be HTMLLinkElement but got ", linkElement);
-        return "";
-    }
-
     let url = linkElement.href;
 
     if (url === "") return "";
@@ -409,6 +404,10 @@ async function createOrUpdateStyleElement(cssElement) {
     let cssText;
     if (cssElement instanceof HTMLLinkElement) {
         cssText = await getHtmlLinkElementData(cssElement);
+        if(cssText===""){
+            setTimeout(()=>{createOrUpdateStyleElement(cssElement);},8000);
+            return ;
+        }
     } else {
         cssText = getCssText(cssElement);
     }

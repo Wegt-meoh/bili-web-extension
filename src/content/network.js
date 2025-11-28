@@ -7,27 +7,33 @@ if (typeof browser === 'undefined') {
 }
 
 export async function loadAsText(url, origin) {
-    if (typeof url !== "string") {
-        throw new TypeError("url must be string but got", url);
-    }
-
-    if (typeof origin !== "string") {
-        throw new TypeError("origin must be string but got", origin);
-    }
-
     const credentials = url.startsWith(origin) ? undefined : "omit";
     const parsedUrl = new URL(url);
-    const resp = await fetch(parsedUrl, {
-        cache: "force-cache",
-        referrer: origin,
-        credentials
-    });
-    if (resp.ok) {
-        return resp.text();
+    const controller=new AbortController();
+    const signal=controller.signal;
+    const timeout=setTimeout(()=>{controller.abort();},3000);
+    try {
+        const resp = await fetch(parsedUrl, {
+            cache: "force-cache",
+            referrer: origin,
+            signal,
+            credentials
+        });
+        clearTimeout(timeout);
+        if (resp.ok) {
+            return resp.text();
+        }
+        return "";
+    } catch {
+        return "";
     }
-    throw new Error(`Unable to load ${url} ${resp.status} ${resp.statusText}`);
 };
 
+/**
+ * fetch the url resource as text, if any error occurred then return ""
+ * @param {string} url 
+ * @param {string} origin 
+ */
 async function bgFetch(url, origin) {
     return await browser.runtime.sendMessage({ type: MessageType.FETCH, url, origin });
 }
@@ -42,6 +48,8 @@ export async function loadText(url, origin) {
     } else {
         data = await bgFetch(url, origin);
     }
-    writeCssFetchCache(url, data);
+    if (data !== "") {
+        writeCssFetchCache(url, data);
+    }
     return data;
 }
