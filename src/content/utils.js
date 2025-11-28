@@ -90,11 +90,11 @@ export function getSystemColorTheme() {
 
 export class Logger {
     static log(...messages) {
-        console.log("bili-web-extension: catch err", ...messages);
+        console.log("bili-web-extension log: ", ...messages);
     }
 
     static err(...reasons) {
-        console.error("bili-web-extension: catch err", ...reasons);
+        console.error("bili-web-extension error: ", ...reasons);
     }
 }
 
