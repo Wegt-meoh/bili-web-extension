@@ -66,8 +66,7 @@ async function handleOnMessage(message, sendResponse) {
                 const { url, origin } = message;
                 const text = await loadAsText(url, origin);
                 sendResponse(text);
-            } catch (err) {
-                Logger.err("bg fetch failed", err);
+            } catch  {
                 sendResponse("");
             }
             break;
