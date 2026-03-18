@@ -11,7 +11,8 @@ export default defineConfig([
         rules: {
             "no-unused-vars": "warn",
             "indent": ["error", 4, { "SwitchCase": 1 }],
-            "semi": ["error", "always"]
+            "semi": ["error", "always"],
+            "no-unreachable":"warn",
         }
     },
     { ignores: ["node_modules", "dist"] }

@@ -1,4 +1,5 @@
 import { extractHSL, extractRGB, extractRgbFromHex, hslToRgb, hslToString, invertHslColor, invertRgbColor, isDarkColor, rgbToHexText, rgbToText } from "./color.js";
+import * as csstree from "css-tree";
 import { CLASS_PREFIX, COLOR_KEYWORDS, defaultDarkColor, IGNORE_SELECTOR, PSEUDO_ELEMENT, STYLE_SELECTOR } from "./const.js";
 import { injectUserAgentStyle } from "./fallback.js";
 import { loadText } from "./network.js";
@@ -223,61 +224,39 @@ function generateComputedMap(root) {
     return computedStyleMap;
 }
 
-function handleRules(rules, computedStyle, computedStyleMap, selectorText) {
+/**
+ * 
+ * @param {csstree.CssNode} declarationListAst 
+ * @param {CSSStyleDeclaration|null|undefined} computedStyle 
+ * @param {object|null|undefined} computedStyleMap 
+ * @param {string|null|undefined} selectorText 
+ * @returns 
+ */
+function handleDeclarationList(declarationListAst, computedStyle, computedStyleMap, selectorText) {
     if (computedStyle) {
         selectorText = "self";
         computedStyleMap = { self: computedStyle };
     }
     const modifiedRules = [];
-    rules.forEach(rule => {
-        try {
-            const { prop, value, important } = rule;
-            if (typeof prop !== "string" || typeof value !== "string" || typeof important !== "boolean") return;
-            // handle the definition of css variable
-            if (/^--[\w-_]+[\w\d-_]*/.test(prop) && isOtherColorCssVar(prop, computedStyleMap[selectorText])) {
-                const relatedProp = ["background", "border", "color"];
-                relatedProp.forEach((cssProp) => {
-                    const newPropName = addCssPrefix(getCssPropType(cssProp), prop);
-                    const newValue = getNewValue(cssProp, value, computedStyleMap, selectorText);
-                    modifiedRules.push({ prop: newPropName, value: newValue });
-                });
-                return;
-            }
+    csstree.walk(declarationListAst,node=>{
+        if(node.type==="DeclarationList"){
 
-            let newValue = getNewValue(prop, value, computedStyleMap, selectorText);
-
-            if (value === newValue) {
-                return;
-            }
-
-            if (important) {
-                newValue += "!important";
-            }
-            modifiedRules.push({ prop, value: newValue });
-        } catch (error) {
-            Logger.log(error);
+            return csstree.walk.skip;
         }
-    });
+    }); 
     return modifiedRules;
 }
-
-export function generateModifiedRules(cssStyleRules, rootNode) {
+/**
+  * @param {csstree.CssNode} styleSheetAst 
+  * @param {Node} rootNode 
+  * @returns 
+*/
+export function handleStyleSheet(styleSheetAst, rootNode) {
     const modifiedCssRules = [];
     const computedStyleMap = generateComputedMap(rootNode);
 
-    cssStyleRules.forEach(cssStyleRule => {
-        const { rules, selectorText } = cssStyleRule;
-
-        // ignore this cssrule when match
-        if (checkShouldIgnore(selectorText)) {
-            return;
-        }
-
-        const modifiedRules = handleRules(rules, null, computedStyleMap, selectorText);
-
-        if (modifiedRules.length > 0) {
-            modifiedCssRules.push({ selectorText: selectorText, rules: modifiedRules });
-        }
+    csstree.walk(styleSheetAst,node=>{
+        // console.log("handleStyleSheet csstree walk",node);
     });
 
     return modifiedCssRules;
@@ -364,15 +343,15 @@ function handleInlineStyle(element) {
         originalInlineStyle.set(element, element.getAttribute("style"));
     }
 
-    const cssRules = parseStyleAttribute(originalInlineStyle.get(element));
-    const modifiedRules = handleRules(cssRules, getComputedStyle(element));
+    const declarationListAst = parseStyleAttribute(originalInlineStyle.get(element));
+    const modifiedRules = handleDeclarationList(declarationListAst, getComputedStyle(element));
 
     if (modifiedRules.length === 0) {
         originalInlineStyle.delete(element);
         return;
     }
 
-    element.setAttribute("style", cssDeclarationToText([...cssRules, ...modifiedRules]));
+    element.setAttribute("style", cssDeclarationToText([...declarationListAst, ...modifiedRules]));
 }
 
 function getCssText(styleElement) {
@@ -411,8 +390,8 @@ async function createOrUpdateStyleElement(cssElement) {
     } else {
         cssText = getCssText(cssElement);
     }
-    const parsedCssRules = parseCssStyleSheet(cssText);
-    const modifiedRules = generateModifiedRules(parsedCssRules, cssElement.getRootNode());
+    const styleSheetAst = parseCssStyleSheet(cssText);
+    const modifiedRules = handleStyleSheet(styleSheetAst, cssElement.getRootNode());
 
     const relatedStyleElement = relatedStyleMap.get(cssElement);
     if (relatedStyleElement && relatedStyleElement instanceof HTMLStyleElement) {
@@ -424,7 +403,6 @@ async function createOrUpdateStyleElement(cssElement) {
 
     const injectedStyleElem = document.createElement("style");
     injectedStyleElem.classList.add(CLASS_PREFIX);
-    injectedStyleElem.type = "text/css";
     injectedStyleElem.media = "screen";
     injectedStyleElem.textContent = cssBlocksToText(modifiedRules);
     cssElement.insertAdjacentElement('afterend', injectedStyleElem);
@@ -438,7 +416,7 @@ function handleAdoptedStyle(docum) {
 
     const styleSheetList = docum.adoptedStyleSheets.filter(s => s._tag !== CLASS_PREFIX);
     const modifiedRulesList = styleSheetList
-        .map(sheet => generateModifiedRules(parseCssStyleSheet(getStyleSheetText(sheet)), docum))
+        .map(sheet => handleStyleSheet(parseCssStyleSheet(getStyleSheetText(sheet)), docum))
         .filter(i => i !== null);
     const injectedCssStyleSheetList = modifiedRulesList.map(rules => {
         const styleSheet = new CSSStyleSheet();

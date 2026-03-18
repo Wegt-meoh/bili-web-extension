@@ -1,44 +1,23 @@
 import * as csstree from "css-tree";
 
+/**
+ * 
+ * @param {string} text 
+ * @returns {csstree.CssNode}
+ */
 export function parseStyleAttribute(text) {
     const ast = csstree.parse(text, { context: "declarationList" });
-    const result = [];
-    csstree.walk(ast, node => {
-        if (node.type === "Declaration") {
-            result.push({
-                prop: node.property,
-                value: csstree.generate(node.value),
-                important: node.important
-            });
-        }
-    });
-    return result;
+    return ast;
 }
 
+/**
+ * 
+ * @param {string} text 
+ * @returns {csstree.CssNode}
+ */
 export function parseCssStyleSheet(text) {
     const ast = csstree.parse(text);
-    const styleCssRules = [];
-    csstree.walk(ast, node => {
-        if (node.type !== "Rule" && node.type !== "StyleSheet") {
-            return csstree.walk.skip;
-        }
-
-        if (node.type !== "Rule") return;
-
-        const selectorText = csstree.generate(node.prelude);
-        const rules = [];
-        node.block.children.forEach(child => {
-            if (child.type === "Declaration") {
-                rules.push({
-                    prop: child.property,
-                    value: csstree.generate(child.value),
-                    important: child.important
-                });
-            }
-        });
-        styleCssRules.push({ selectorText, rules });
-    });
-    return styleCssRules;
+    return ast;
 }
 
 export function getStyleSheetText(sheet) {
