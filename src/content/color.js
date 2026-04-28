@@ -1,11 +1,13 @@
+import { FLOAT, PERCENTAGE } from "./const";
+
 /**
 * @param {string} p 
 */
 function parsePercentage(p){
-    if(/^d+%$/.test(p)){
+    if(PERCENTAGE.test(p)){
         return parseInt(p)/100;
     }
-    if(/^d*\.?d*$/.test(p)){
+    if(FLOAT.test(p)){
         return parseFloat(p) ;    
     }
     if(p==="none") return 0;
@@ -22,10 +24,11 @@ function parseRgbNumber(n){
         else return x;
     };
 
-    if(/^d+%$/.test(n)){
+    if(PERCENTAGE.test(n)){
         return limit(Math.round(255*parseInt(n)/100));
     }
-    if(/d+/.test(n)){
+    if(FLOAT.test(n)){
+        // float will be round or ignore
         return limit(parseInt(n)); 
     }
     if(n==="none"){
@@ -38,21 +41,26 @@ function parseRgbNumber(n){
 * @param {string} h 
 */
 function parseHue(h){
-    if(/^\d*(\.\d+)?$/.test(h)||/^\d*(\.\d+)?deg$/.test(h)){
-        return parseFloat(h);
+    if(h==="none") return 0;
+
+    const unitList=['','deg','turn','rad','grad'];
+    for(let unit of unitList){
+        if(h.endsWith(unit) && FLOAT.test(h.slice(0,h.length-unit.length))){
+            if(unit==="deg" || unit===""){
+                return parseFloat(h);
+            }
+            if(unit==="turn"){
+                return parseFloat(h)*360;
+            }
+            if(unit==="rad"){
+                return parseFloat(h)*180/Math.PI;
+            }
+            if(unit==="grad"){
+                return parseFloat(h)/400*360;
+            }
+        }
     }
-    if(/^\d*(\.\d+)?turn$/.test(h)){
-        return parseFloat(h)*360;
-    }
-    if(/^\d*(\.\d+)?rad$/.test(h)){
-        return parseFloat(h)*180/Math.PI;
-    }
-    if(/^\d*(\.\d+)?grad$/.test(h)){
-        return parseFloat(h)/400*360;
-    }
-    if(h==="none"){
-        return 0;
-    }
+
     throw new Error("Parse Hue value error the input is",h);
 }
 

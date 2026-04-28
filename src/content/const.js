@@ -33,3 +33,7 @@ export const defaultDarkColor = {
     border: "rgb(34,36,37)",
     text: "rgb(255,255,255)"
 };
+
+export const PERCENTAGE=/^\d*(\.d+)?%$/;
+export const FLOAT=/^\d*(\.d+)?$/;
+export const INTEGER=/^\d+$/;
