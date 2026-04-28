@@ -6,7 +6,7 @@ import * as csstree from "css-tree";
  * @returns {csstree.CssNode}
  */
 export function parseStyleAttribute(text) {
-    const ast = csstree.parse(text, { context: "declarationList" });
+    const ast = csstree.parse(text, { context: "declarationList",parseCustomProperty: true });
     return ast;
 }
 
@@ -16,7 +16,7 @@ export function parseStyleAttribute(text) {
  * @returns {csstree.CssNode}
  */
 export function parseCssStyleSheet(text) {
-    const ast = csstree.parse(text);
+    const ast = csstree.parse(text,{parseCustomProperty: true});
     return ast;
 }
 

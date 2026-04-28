@@ -226,26 +226,77 @@ function generateComputedMap(root) {
 
 /**
  * 
- * @param {csstree.CssNode} declarationListAst 
+ * @param {csstree.CssNode} declarationListCssNode 
  * @param {CSSStyleDeclaration|null|undefined} computedStyle 
  * @param {object|null|undefined} computedStyleMap 
  * @param {string|null|undefined} selectorText 
  * @returns 
  */
-function handleDeclarationList(declarationListAst, computedStyle, computedStyleMap, selectorText) {
+function handleDeclarationList(declarationListCssNode, computedStyle, computedStyleMap, selectorText) {
     if (computedStyle) {
         selectorText = "self";
         computedStyleMap = { self: computedStyle };
     }
     const modifiedRules = [];
-    csstree.walk(declarationListAst,node=>{
-        if(node.type==="DeclarationList"){
-
-            return csstree.walk.skip;
-        }
-    }); 
+    if(declarationListCssNode.type==="DeclarationList"){
+        declarationListCssNode.children.forEach(declaration=>{
+            handleDeclaration(declaration);
+        });
+    }
     return modifiedRules;
 }
+
+/**
+ * @param {csstree.CssNode} declaration 
+ */
+function handleDeclaration(declaration){
+    const {type,value:declarationValue}=declaration;
+    if(type==="Declaration"&&declarationValue.type==="Value"){
+        console.log("origin: ",csstree.generate(declaration));
+        declarationValue.children.forEach(c=>{
+            handlePerValue(c);
+        });
+        console.log("changed: ",csstree.generate(declaration));
+    }
+}
+
+/**
+ * @param {csstree.CssNode} value 
+ */
+function handlePerValue(value){
+    let hasChanged=false;
+    switch(value.type){
+        case "Hash":{
+            console.log(value.value);
+            break;
+        }
+        case "Function":{
+            const functionName=value.name;
+            if(functionName==="var"){
+                value.children.forEach(c=>handlePerValue(c));
+            }else if (functionName.includes("rgb")){
+                const data=[];
+                const acceptedType=["Number","Identifier","Percentage"];
+                const color=value.children.filter(item=>acceptedType.includes(item.type)).map(item=>{
+                    if(item.type==="Identifier"){
+                        return 0;
+                    }
+                    if(item.type==="Percentage"){
+                        return Math.round(255*parseInt(item.value)*value/100);
+                    }
+                    if(item.value.includes(".")){
+                        return parseFloat(item.value);
+                    }
+                    return parseInt(item.value);
+                });
+            }else if( functionName.includes("hsl")){
+
+            }
+            break;
+        }
+    }
+}
+
 /**
   * @param {csstree.CssNode} styleSheetAst 
   * @param {Node} rootNode 
