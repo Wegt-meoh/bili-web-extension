@@ -14,22 +14,26 @@ function parsePercentage(p){
     throw new Error("Parse percentage fail the input is",p); 
 }
 
+
+/**
+* @param {number} x
+*/
+const limitRgbValue=(x)=>{
+    if(x>255) return 255;
+    else if(x<0) return 0;
+    else return x;
+};
+
 /**
 * @param {string} n 
 */
 function parseRgbNumber(n){
-    const limit=(x)=>{
-        if(x>255) return 255;
-        else if(x<0) return 0;
-        else return x;
-    };
-
     if(PERCENTAGE.test(n)){
-        return limit(Math.round(255*parseInt(n)/100));
+        return limitRgbValue(Math.round(255*parseInt(n)/100));
     }
     if(FLOAT.test(n)){
         // float will be round or ignore
-        return limit(parseInt(n)); 
+        return limitRgbValue(parseInt(n)); 
     }
     if(n==="none"){
         return 0;
