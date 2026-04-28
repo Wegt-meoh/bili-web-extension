@@ -1,3 +1,118 @@
+/**
+* @param {string} p 
+*/
+function parsePercentage(p){
+    if(/^d+%$/.test(p)){
+        return parseInt(p)/100;
+    }
+    if(/^d*\.?d*$/.test(p)){
+        return parseFloat(p) ;    
+    }
+    if(p==="none") return 0;
+    throw new Error("Parse percentage fail the input is",p); 
+}
+
+/**
+* @param {string} n 
+*/
+function parseRgbNumber(n){
+    const limit=(x)=>{
+        if(x>255) return 255;
+        else if(x<0) return 0;
+        else return x;
+    };
+
+    if(/^d+%$/.test(n)){
+        return limit(Math.round(255*parseInt(n)/100));
+    }
+    if(/d+/.test(n)){
+        return limit(parseInt(n)); 
+    }
+    if(n==="none"){
+        return 0;
+    }
+    throw new Error("Parse RGB number fail the input is",n);
+}
+
+/**
+* @param {string} h 
+*/
+function parseHue(h){
+    if(/^\d*(\.\d+)?$/.test(h)||/^\d*(\.\d+)?deg$/.test(h)){
+        return parseFloat(h);
+    }
+    if(/^\d*(\.\d+)?turn$/.test(h)){
+        return parseFloat(h)*360;
+    }
+    if(/^\d*(\.\d+)?rad$/.test(h)){
+        return parseFloat(h)*180/Math.PI;
+    }
+    if(/^\d*(\.\d+)?grad$/.test(h)){
+        return parseFloat(h)/400*360;
+    }
+    if(h==="none"){
+        return 0;
+    }
+    throw new Error("Parse Hue value error the input is",h);
+}
+
+/**
+* @param {string} a
+*/
+function parseAlphaValue(a){
+    if(a==="none"){
+        return 1;
+    }else{
+        return parsePercentage(a);
+    }
+}
+
+/**
+* @param {string} r 
+* @param {string} g 
+* @param {string} b 
+* @param {string} [a] 
+*/
+export function normalizeRGB(r,g,b,a){
+    const originalValue=[r,g,b];
+    let normalizedResult=[];
+    originalValue.forEach(value=>{
+        normalizedResult.push(parseRgbNumber(value));
+    });
+
+    if(a){
+        normalizedResult.push(parseAlphaValue(a));
+    }
+
+    return normalizedResult;
+}
+
+/**
+* @param {string} h 
+* @param {string} s 
+* @param {string} l 
+* @param {string} a 
+*/
+export function normalizeHSL(h,s,l,a){
+    const normalizedResult=[];
+    normalizedResult.push(parseHue(h));
+
+    if(!s.endsWith("%")){
+        s+='%';
+    }
+    if(!l.endsWith("%")){
+        l+='%';
+    }
+
+    normalizedResult.push(parsePercentage(s),parsePercentage(l));
+
+    if(a){
+        normalizedResult.push(parseAlphaValue(a));
+    }
+
+    return normalizedResult;
+}
+
 export function extractRGB(color) {
     const match = color.match(/[\d.]+/g);
     return match ? match.map(parseFloat) : null;
