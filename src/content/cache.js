@@ -13,3 +13,35 @@ export function readCssFetchCache(url) {
         return null;
     }
 }
+
+export class SelectedElementStorage{
+    constructor(){
+        this.storage=new Map();
+    }
+
+    insert(selectorText,element){
+        this.storage.set(selectorText,element);
+    }
+
+    get(selectorText){
+        return this.storage.get(selectorText);
+    }
+}
+
+export class CustomPropertyStorage{
+    constructor(){
+        this.storage=new Map();
+    }
+
+    insert(name,isColorVar){
+        // although there are two properties has same name
+        // the propType of them are assumed to be same
+        if (isColorVar){
+            this.storage.set(name,isColorVar);
+        }
+    }
+
+    get(name){
+        return this.storage.get(name);
+    }
+}
