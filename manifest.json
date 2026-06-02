@@ -38,6 +38,12 @@
             "48": "images/icon-48.png"
         }
     },
+    "web_accessible_resources": [
+        {
+            "resources": ["*.map"],
+            "matches": ["<all_urls>"]
+        }
+    ],
     "permissions": [
         "activeTab",
         "scripting",

@@ -8,4 +8,7 @@ export default defineConfig({
             browser: 'chrome', // Target browser: 'chrome', 'firefox', etc.
         }),
     ],
+    build: {
+        sourcemap: true,
+    },
 });
