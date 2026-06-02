@@ -5,9 +5,8 @@ import * as csstree from "css-tree";
  * @param {string} text 
  * @returns {csstree.CssNode}
  */
-export function parseStyleAttribute(text) {
-    const ast = csstree.parse(text, { context: "declarationList",parseCustomProperty: true });
-    return ast;
+export function parseInlineStyle(text) {
+    return csstree.parse(text, { context: "declarationList",parseCustomProperty: true });
 }
 
 /**
