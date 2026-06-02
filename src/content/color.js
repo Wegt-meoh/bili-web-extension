@@ -1,3 +1,4 @@
+import { parse } from "culori";
 import { FLOAT, PERCENTAGE } from "./const";
 
 /**
@@ -80,28 +81,25 @@ function parseAlphaValue(a){
 }
 
 export function extractRGB(color) {
-    const match = color.match(/[\d.]+/g);
-    return match ? match.map(parseFloat) : null;
+    const rgb=parse(color);
+    if (rgb){
+        return [rgb.r,rgb.g,rgb.b,rgb.a];
+    }else{
+        return undefined;
+    }
 }
 
 export function extractHSL(color) {
-    if (typeof color !== "string") {
-        throw new TypeError("color must be string");
+    const hsl=parse(color);
+    if(hsl){
+        return [hsl.h,hsl.s,hsl.l,hsl.a];
+    }else{
+        return undefined;
     }
-    const matchResult = color.match(/[\d.]+%?/g);
-    if (!matchResult) {
-        throw new Error("can not extract hsl from color: " + color);
-    };
-    return matchResult.map(v => {
-        if (v.includes("%")) {
-            return parseFloat(v) / 100;
-        }
-        return parseFloat(v);
-    });
 }
 
-export function hslToString(h, s, l, a) {
-    return `hsl${a !== undefined ? 'a' : ''}(${h}, ${s * 100}%, ${l * 100}%${a !== undefined ? `, ${a}` : ''})`;
+export function hslToText(h, s, l, a=1) {
+    return `hsl(${h} gs * 100}% ${l * 100}%${a !== 1? `/ ${a}` : ''})`;
 }
 
 export function extractRgbFromHex(hex) {
@@ -109,7 +107,7 @@ export function extractRgbFromHex(hex) {
     hex = hex.replace(/^#/, "");
 
     // Parse different hex formats
-    let r, g, b, a;
+    let r, g, b, a=255;
     if (hex.length === 3) {
         // Short format (e.g., #f80 → #ff8800)
         r = parseInt(hex[0] + hex[0], 16);
@@ -119,8 +117,7 @@ export function extractRgbFromHex(hex) {
         r = parseInt(hex[0] + hex[0], 16);
         g = parseInt(hex[1] + hex[1], 16);
         b = parseInt(hex[2] + hex[2], 16);
-        a = parseInt(hex[3] + hex[3], 16) / 255;
-        return [r, g, b, a];
+        a = parseInt(hex[3] + hex[3], 16) ;
     } else if (hex.length === 6) {
         // Full format (e.g., #ff5733)
         r = parseInt(hex.substring(0, 2), 16);
@@ -130,25 +127,30 @@ export function extractRgbFromHex(hex) {
         r = parseInt(hex.substring(0, 2), 16);
         g = parseInt(hex.substring(2, 4), 16);
         b = parseInt(hex.substring(4, 6), 16);
-        a = parseInt(hex.substring(6, 8), 16) / 255;
-        return [r, g, b, a];
+        a = parseInt(hex.substring(6, 8), 16) ;
     } else {
-        throw new Error("Invalid hex color format hex=" + hex);
+        return undefined;
     }
 
-    return [r, g, b]; // Returns an array [r, g, b]
+    return [r/255, g/255, b/255,a/255]; 
 }
 
-export function rgbToHexText(r, g, b, a) {
-    return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}${a !== undefined ? Math.round(a * 255).toString(16).padStart(2, "0") : ""}`;
+export function rgbToHexText(r, g, b, a=1) {
+    r=Math.round(r*255);
+    g=Math.round(g*255);
+    b=Math.round(b*255);
+    return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}${a !== 1? Math.round(a * 255).toString(16).padStart(2, "0") : ""}`;
 }
 
-export function rgbToText(r, g, b, a) {
-    return `rgb${a !== undefined ? 'a' : ''}(${r}, ${g}, ${b}${a !== undefined ? `, ${a}` : ''})`;
+export function rgbToText(r, g, b, a=1) {
+    return `rgb(${Math.round(r*255)} ${Math.round(g*255)} ${Math.round(b*255)} ${a!==1?`/ ${a}`:""})`;
 }
-
+/**
+* @param {number} r 0-1
+* @param {number} g 0-1
+* @param {number} b 0-1 
+*/
 export function rgbToHsl(r, g, b) {
-    r /= 255, g /= 255, b /= 255;
     let max = Math.max(r, g, b), min = Math.min(r, g, b);
     let h, s, l = (max + min) / 2;
 
@@ -187,14 +189,14 @@ export function hslToRgb(h, s, l) {
         g = hue2rgb(p, q, h);
         b = hue2rgb(p, q, h - 1 / 3);
     }
-    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+    return [r,g,b]; 
 }
 
 export function invertHslColor(h, s, l, a) {
     // color is too light invert it
     if (1 - l < 0.12) {
         let [r, g, b] = hslToRgb(h, s, 1 - l);
-        let [i_h, i_s, i_l] = rgbToHsl(r + 24, g + 26, b + 27);
+        let [i_h, i_s, i_l] = rgbToHsl(r + 24/255, g + 26/255, b + 27/255);
         return [i_h, i_s, i_l, a];
     }
 
@@ -202,14 +204,16 @@ export function invertHslColor(h, s, l, a) {
     return [h, s, 1 - l, a];
 }
 
-export function invertRgbColor(r, g, b, a) {
+export function invertRgbColor(r, g, b) {
     let [h, s, l] = rgbToHsl(r, g, b);
-    return [...hslToRgb(...invertHslColor(h, s, l)), a];
+    return [...hslToRgb(...invertHslColor(h, s, l))];
 }
 
-export function isDarkColor(r, g, b) {
-    // eslint-disable-next-line no-unused-vars
-    const [h, s, l] = rgbToHsl(r, g, b);
+
+/**
+* @param {number} l 0-1 
+*/
+export function isDarkColor(l) {
     if (l < 0.5) {
         return true;
     }
