@@ -1,84 +1,4 @@
 import { parse } from "culori";
-import { FLOAT, PERCENTAGE } from "./const";
-
-/**
-* @param {string} p 
-*/
-function parsePercentage(p){
-    if(PERCENTAGE.test(p)){
-        return parseInt(p)/100;
-    }
-    if(FLOAT.test(p)){
-        return parseFloat(p) ;    
-    }
-    if(p==="none") return 0;
-    throw new Error("Parse percentage fail the input is",p); 
-}
-
-
-/**
-* @param {number} x
-*/
-const limitRgbValue=(x)=>{
-    if(x>255) return 255;
-    else if(x<0) return 0;
-    else return x;
-};
-
-/**
-* @param {string} n 
-*/
-function parseRgbNumber(n){
-    if(PERCENTAGE.test(n)){
-        return limitRgbValue(Math.round(255*parseInt(n)/100));
-    }
-    if(FLOAT.test(n)){
-        // float will be round or ignore
-        return limitRgbValue(parseInt(n)); 
-    }
-    if(n==="none"){
-        return 0;
-    }
-    throw new Error("Parse RGB number fail the input is",n);
-}
-
-/**
-* @param {string} h 
-*/
-function parseHue(h){
-    if(h==="none") return 0;
-
-    const unitList=['','deg','turn','rad','grad'];
-    for(let unit of unitList){
-        if(h.endsWith(unit) && FLOAT.test(h.slice(0,h.length-unit.length))){
-            if(unit==="deg" || unit===""){
-                return parseFloat(h);
-            }
-            if(unit==="turn"){
-                return parseFloat(h)*360;
-            }
-            if(unit==="rad"){
-                return parseFloat(h)*180/Math.PI;
-            }
-            if(unit==="grad"){
-                return parseFloat(h)/400*360;
-            }
-        }
-    }
-
-    throw new Error("Parse Hue value error the input is",h);
-}
-
-/**
-* @param {string} a
-*/
-function parseAlphaValue(a){
-    if(a==="none"){
-        return 1;
-    }else{
-        return parsePercentage(a);
-    }
-}
 
 export function extractRGB(color) {
     const rgb=parse(color);
@@ -99,7 +19,7 @@ export function extractHSL(color) {
 }
 
 export function hslToText(h, s, l, a=1) {
-    return `hsl(${h} gs * 100}% ${l * 100}%${a !== 1? `/ ${a}` : ''})`;
+    return `hsl(${h} ${s * 100}% ${l * 100}%${a !== 1? `/ ${a}` : ''})`;
 }
 
 export function extractRgbFromHex(hex) {

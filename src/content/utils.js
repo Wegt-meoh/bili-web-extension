@@ -1,5 +1,10 @@
 import * as csstree from "css-tree";
 
+export function parsePerValue(value){
+    const newValue=csstree.parse(value,{context:"value"});
+    return newValue.children.first;
+}
+
 /**
  * 
  * @param {string} text 

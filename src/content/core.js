@@ -1,9 +1,12 @@
-import { extractHSL, extractRGB, extractRgbFromHex, hslToRgb, hslToString, invertHslColor, invertRgbColor, isDarkColor, rgbToHexText, rgbToText } from "./color.js";
+import { extractHSL, extractRGB, extractRgbFromHex, hslToText, invertHslColor, invertRgbColor, isDarkColor, rgbToHexText, rgbToHsl, rgbToText } from "./color.js";
 import * as csstree from "css-tree";
 import { CLASS_PREFIX, COLOR_KEYWORDS, defaultDarkColor, IGNORE_SELECTOR, PSEUDO_ELEMENT, STYLE_SELECTOR } from "./const.js";
 import { injectUserAgentStyle } from "./fallback.js";
 import { loadText } from "./network.js";
-import { classNameToSelectorText, cssBlocksToText, cssDeclarationToText, getStyleSheetText, Logger, parseCssStyleSheet, parseStyleAttribute } from "./utils.js";
+import { classNameToSelectorText, cssBlocksToText, cssDeclarationToText, getStyleSheetText, Logger, parseCssStyleSheet, parseInlineStyle, parsePerValue } from "./utils.js";
+import { CustomPropertyStorage } from "./cache.js";
+
+const customPropertyStore=new CustomPropertyStorage();
 
 function isFontsGoogleApiStyle(element) {
     if (typeof element.href !== "string") {
@@ -30,8 +33,7 @@ function shouldManageStyle(element) {
                 !element.disabled &&
                 (navigator.userAgent.toLowerCase().includes("firefox") ?
                     !element.href.startsWith("moz-extension://") : true
-                ) &&
-                !isFontsGoogleApiStyle(element)
+                ) &isFontsGoogleApiStyle(element)
             )
         ) &&
         element.media.toLowerCase() !== "print" &&
@@ -81,88 +83,88 @@ function getStyles(element, result = []) {
     return result;
 }
 
-function isKeyWordColor(color) {
+function isColorKeyword(color) {
     if (typeof color !== "string") {
         throw new TypeError("color should be string");
     }
     return COLOR_KEYWORDS.has(color.toLowerCase());
 }
 
-function isOtherColor(color) {
-    if (typeof color !== "string") {
-        throw new TypeError("color should be string");
-    }
-    return /^(rgba?\(|hsla?\(|#|\d+,\d+,\d+)/i.test(color);
-
-}
-
-function isOtherColorCssVar(variable, rootComputedStyle) {
-    return isOtherColor(rootComputedStyle.getPropertyValue(variable).trim());
+function isColorRelatedValue(value) {
+    return !isColorKeyword(value)&&/^(rgba?\(|hsla?\(|#|\d+,\d+,\d+)/i.test(value);
 }
 
 function getCssPropType(prop) {
     return /^background|^(?!--).*-shadow$/i.test(prop) ? "bg" : /^border|^outline|^column-rule|^stroke$/i.test(prop) ? "border" : /^(color|text-decoration-color|caret-color|fill)$/i.test(prop) ? "text" : "";
 }
 
-function shouldInvertColor(propType, r, g, b) {
+function shouldInvertColor(propType, l) {
     if (propType === "") {
         return false;
     }
-    const isDarkColorResult = isDarkColor(r, g, b);
+    const isDarkColorResult = isDarkColor(l);
     if ((isDarkColorResult && (propType === "bg" || propType === "border")) || (!isDarkColorResult && propType === "text")) {
         return false;
     }
     return true;
 }
 
-function handleRgbColor(prop, color) {
-    const [r, g, b, a] = extractRGB(color);
-    const propType = getCssPropType(prop);
-    if (!shouldInvertColor(propType, r, g, b)) {
-        return color;
+function handleRgbColor(propType, color) {
+    const rgbColor=extractRGB(color);
+    if(rgbColor){
+        const [r, g, b, a] = rgbColor;
+        const [,,l]=rgbToHsl(r,g,b);
+        if (!shouldInvertColor(propType, l)) {
+            return color;
+        }
+        return rgbToText(...invertRgbColor(r, g, b ),a);
+    }else{
+        return undefined;
     }
-    return rgbToText(...invertRgbColor(r, g, b, a));
 }
 
-function handleHexColor(prop, color) {
-    const [r, g, b, a] = extractRgbFromHex(color);
-    const propType = getCssPropType(prop);
-    if (!shouldInvertColor(propType, r, g, b)) {
-        return color;
+/**
+* @param {string} propType 
+* @param {string} color #fff 
+*/
+function handleHexColor(propType, color) {
+    const rgbColor=extractRgbFromHex(color);
+    if(rgbColor){
+        const [r, g, b, a] = rgbColor; 
+        const [,,l]=rgbToHsl(r,g,b);
+        if (!shouldInvertColor(propType,l)) {
+            return color;
+        }
+        return rgbToHexText(...invertRgbColor(r, g, b, a));
     }
-    return rgbToHexText(...invertRgbColor(r, g, b, a));
 }
 
-function handleHslColor(prop, color) {
-    const [h, s, l, a] = extractHSL(color);
-    const [r, g, b] = hslToRgb(h, s, l);
-    const propType = getCssPropType(prop);
-    if (!shouldInvertColor(propType, r, g, b)) {
-        return color;
+function handleHslColor(propType, color) {
+    const hslColor=extractHSL(color);
+    if(hslColor){
+        const [h, s, l, a] = hslColor;
+        if (!shouldInvertColor(propType, l)) {
+            return color;
+        }
+        return hslToText(...invertHslColor(h, s, l, a));
     }
-    return hslToString(...invertHslColor(h, s, l, a));
 }
 
 export function addCssPrefix(propType, variable) {
+    if(propType===""){
+        throw new Error("can not add prefix to unknown prop type for css variable",variable);
+    }
     return `--${CLASS_PREFIX}-${propType}${variable}`;
 }
 
-function handleVar(prop, variable, computedStyleMap, selectorText) {
-    const propType = getCssPropType(prop);
-    if (propType !== "" && isOtherColorCssVar(variable, computedStyleMap[selectorText])) {
-        return addCssPrefix(propType, variable);
-    }
-    return variable;
-}
-
-function handleDirectRgb(prop, rgb) {
+function handleDirectRgb(propType, rgb) {
     let [r, g, b] = rgb.matchAll(/\d+/g);
     r = parseInt(r);
     g = parseInt(g);
     b = parseInt(b);
 
-    const propType = getCssPropType(prop);
-    if (!shouldInvertColor(propType, r, g, b)) {
+    const [,,l]=rgbToHsl(r/255,g/255,b/255);
+    if (!shouldInvertColor(propType, l)) {
         return rgb;
     }
 
@@ -170,23 +172,6 @@ function handleDirectRgb(prop, rgb) {
     return `${i_r},${i_g},${i_b}`;
 }
 
-function getNewValue(prop, value, computedStyleMap, selectorText) {
-    let newValue = value.replaceAll(/\brgba?\([\d. ,]+\)/g, color => handleRgbColor(prop, color));
-    newValue = newValue.replaceAll(/\bhsla?\([\d. ,]+\)/g, color => handleHslColor(prop, color));
-    newValue = newValue.replaceAll(/#[\da-fA-F]{3,8}/g, color => handleHexColor(prop, color));
-    newValue = newValue.replaceAll(/--[\w_]+[\w\d-_]*/g, variable => handleVar(prop, variable, computedStyleMap, selectorText));
-    newValue = newValue.replaceAll(/^\d+,\d+,\d+/g, rgb => handleDirectRgb(prop, rgb));
-
-    // handle keyword color
-    newValue = newValue.replaceAll(/\b(inherit|initial|white|black)\b/ig, keyword => {
-        const type = getCssPropType(prop);
-        if (type !== "") {
-            return defaultDarkColor[type] || keyword;
-        }
-        return keyword;
-    });
-    return newValue;
-}
 
 function checkShouldIgnore(selectorText) {
     const selectorList = selectorText.split(",").map(item => item.trim());
@@ -198,22 +183,24 @@ function checkShouldIgnore(selectorText) {
     return false;
 }
 
+// cache computed style by selectorText
 function generateComputedMap(root) {
     const _computedStyleMap = {};
     const computedStyleMap = new Proxy(_computedStyleMap, {
-        get(target, prop, reciever) {
-            const value = Reflect.get(target, prop, reciever);
+        get(target, selectorText, reciever) {
+            const value = Reflect.get(target, selectorText, reciever);
             if (value !== undefined) {
                 return value;
             }
             const fallback = { getPropertyValue() { return ""; } };
             try {
-                let element = prop === ":host" ? root.host : root.querySelector(prop.replaceAll(/:hover/gi, "").replaceAll(PSEUDO_ELEMENT, ""));
+                // find the target element by selector text
+                let element = selectorText === ":host" ? root.host : root.querySelector(selectorText.replaceAll(/:hover/gi, "").replaceAll(PSEUDO_ELEMENT, ""));
                 if (element === null) {
                     element = root instanceof ShadowRoot ? root.host : root.documentElement;
                 }
                 const style = getComputedStyle(element);
-                Reflect.set(target, prop, style, reciever);
+                Reflect.set(target, selectorText, style, reciever);
                 return style;
             } catch (error) {
                 Logger.log(error);
@@ -225,76 +212,148 @@ function generateComputedMap(root) {
 }
 
 /**
- * 
- * @param {csstree.CssNode} declarationListCssNode 
- * @param {CSSStyleDeclaration|null|undefined} computedStyle 
- * @param {object|null|undefined} computedStyleMap 
- * @param {string|null|undefined} selectorText 
- * @returns 
+ * @param {csstree.List<csstree.CssNode>} declarationNodeList
  */
-function handleDeclarationList(declarationListCssNode, computedStyle, computedStyleMap, selectorText) {
-    if (computedStyle) {
-        selectorText = "self";
-        computedStyleMap = { self: computedStyle };
-    }
-    const modifiedRules = [];
-    if(declarationListCssNode.type==="DeclarationList"){
-        declarationListCssNode.children.forEach(declaration=>{
-            handleDeclaration(declaration);
-        });
-    }
-    return modifiedRules;
+function handleDeclarationList(declarationNodeList) {
+    const modifiedList=new csstree.List();
+    declarationNodeList.forEach(declaration=>{
+        if(declaration.type==="Declaration"){
+            modifiedList.push(...handleDeclaration(declaration)); 
+        }
+    });
+    return modifiedList;
 }
 
 /**
- * @param {csstree.CssNode} declaration 
+ * @param {csstree.Declaration} declaration
  */
 function handleDeclaration(declaration){
-    const {type,value:declarationValue}=declaration;
-    if(type==="Declaration"&&declarationValue.type==="Value"){
-        console.log("origin: ",csstree.generate(declaration));
-        declarationValue.children.forEach(c=>{
-            handlePerValue(c);
-        });
-        console.log("changed: ",csstree.generate(declaration));
+    const modified=[];
+    if(declaration.value.type==="Raw"){
+        declaration.value=csstree.parse(declaration.value.value,{context:"value"});
     }
+    if(declaration.value.type==="Value"){
+        const oldValue=csstree.generate(declaration.value.children);
+        const {property}=declaration;
+        const isCustomPropertyResult=isCustomProperty(property);
+        const propTypeList=isCustomPropertyResult?["bg","border","text"]:[getCssPropType(property)];
+        propTypeList.filter(propType=>propType!=="").forEach(propType=>{
+            const newValue=new csstree.List();
+            declaration.value.children.forEach(perValue=>{
+                newValue.push(handlePerValue(propType, perValue));
+            });
+            
+            if(csstree.generate(newValue)!==oldValue){
+                const newDeclaration=csstree.clone(declaration);
+                newDeclaration.value.children=newValue;
+                if(isCustomPropertyResult){
+                    newDeclaration.property=addCssPrefix(propType,property);
+                }
+                modified.push(newDeclaration);
+            }
+        });
+    }
+    return modified;
 }
 
+
 /**
+* @param {string} propType 
  * @param {csstree.CssNode} value 
  */
-function handlePerValue(value){
-    let hasChanged=false;
+function handlePerValue(propType,value){
+    if(propType===""){
+        return value;
+    }
     switch(value.type){
         case "Hash":{
-            console.log(value.value);
-            break;
+            return handleHash(propType,value);
+        }
+        case "Identifier":{
+            return handleIdentifier(propType,value);
         }
         case "Function":{
             const functionName=value.name;
             if(functionName==="var"){
-                value.children.forEach(c=>handlePerValue(c));
-            }else if (functionName.includes("rgb")){
-                const data=[];
-                const acceptedType=["Number","Identifier","Percentage"];
-                const color=value.children.filter(item=>acceptedType.includes(item.type)).map(item=>{
-                    if(item.type==="Identifier"){
-                        return 0;
-                    }
-                    if(item.type==="Percentage"){
-                        return Math.round(255*parseInt(item.value)*value/100);
-                    }
-                    if(item.value.includes(".")){
-                        return parseFloat(item.value);
-                    }
-                    return parseInt(item.value);
+                const newNode=csstree.clone(value);
+                const collection=[];
+                value.children.forEach(c=>{
+                    collection.push(handlePerValue(propType,c));
+                    
                 });
-            }else if( functionName.includes("hsl")){
-
+                newNode.children.fromArray(collection);
+                return newNode;
+            }else if (functionName.startsWith("rgb")){
+                return handleColorFunction(propType,value);
+            }else if(functionName.startsWith("hsl")){
+                return handleColorFunction(propType,value);
             }
-            break;
         }
     }
+    return value;
+}
+
+/**
+* @param {string} propType 
+* @param {csstree.Hash} hash 
+*/
+function handleHash(propType,hash){
+    const newHashValue=handleHexColor(propType,hash.value);
+    if(newHashValue){
+        const newHash=csstree.clone(hash);
+        newHash.value=newHashValue;
+        return newHash;
+    }else{
+        throw new Error("Can not handle hash value",hash.value);
+    }
+}
+
+function isCustomProperty(name){
+    return name.startsWith("--")?true:false;
+}
+
+/**
+* @param {string} propType 
+* @param {csstree.Identifier} identifier 
+*/
+function handleIdentifier(propType,identifier){
+    const {name}=identifier;
+    if (isCustomProperty(name)){
+        const isColorVar=customPropertyStore.get(name);
+        if(isColorVar===true){
+            const newIdentifier=csstree.clone(identifier);
+            newIdentifier.name=addCssPrefix(propType,name);
+            return newIdentifier;
+        }
+        if(isColorVar ===undefined){
+            // this var has not been declared
+        }
+    }
+    return identifier;
+}
+
+/**
+* @param {string} propType 
+* @param {csstree.FunctionNode} colorFunctionNode 
+*/
+function handleColorFunction(propType,colorFunctionNode){
+    const colorText=csstree.generate(colorFunctionNode);
+    const {name:functionName}=colorFunctionNode;
+    let newColorText;
+    if(functionName.startsWith("rgb")){
+        newColorText=handleRgbColor(propType,colorText);
+    }else if(functionName.startsWith("hsl")){
+        newColorText=handleHslColor(propType,colorText);
+    }
+    if(newColorText){
+        const newColorFunction=parsePerValue(newColorText);
+        if(newColorFunction){
+            return newColorFunction;
+        }else{
+            throw new Error("Can not parse rgb function",newColorText);
+        }
+    }
+    return colorFunctionNode; 
 }
 
 /**
@@ -394,8 +453,10 @@ function handleInlineStyle(element) {
         originalInlineStyle.set(element, element.getAttribute("style"));
     }
 
-    const declarationListAst = parseStyleAttribute(originalInlineStyle.get(element));
-    const modifiedRules = handleDeclarationList(declarationListAst, getComputedStyle(element));
+    const declarationListAst = parseInlineStyle(originalInlineStyle.get(element));
+    console.log(originalInlineStyle.get(element));
+    const modifiedRules = handleDeclarationList(declarationListAst.children);
+    console.log(csstree.generate(modifiedRules));
 
     if (modifiedRules.length === 0) {
         originalInlineStyle.delete(element);
