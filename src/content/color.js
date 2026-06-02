@@ -79,52 +79,6 @@ function parseAlphaValue(a){
     }
 }
 
-/**
-* @param {string} r 
-* @param {string} g 
-* @param {string} b 
-* @param {string} [a] 
-*/
-export function normalizeRGB(r,g,b,a){
-    const originalValue=[r,g,b];
-    let normalizedResult=[];
-    originalValue.forEach(value=>{
-        normalizedResult.push(parseRgbNumber(value));
-    });
-
-    if(a){
-        normalizedResult.push(parseAlphaValue(a));
-    }
-
-    return normalizedResult;
-}
-
-/**
-* @param {string} h 
-* @param {string} s 
-* @param {string} l 
-* @param {string} a 
-*/
-export function normalizeHSL(h,s,l,a){
-    const normalizedResult=[];
-    normalizedResult.push(parseHue(h));
-
-    if(!s.endsWith("%")){
-        s+='%';
-    }
-    if(!l.endsWith("%")){
-        l+='%';
-    }
-
-    normalizedResult.push(parsePercentage(s),parsePercentage(l));
-
-    if(a){
-        normalizedResult.push(parseAlphaValue(a));
-    }
-
-    return normalizedResult;
-}
-
 export function extractRGB(color) {
     const match = color.match(/[\d.]+/g);
     return match ? match.map(parseFloat) : null;
