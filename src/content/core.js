@@ -215,7 +215,7 @@ function generateComputedMap(root) {
  * @param {csstree.List<csstree.CssNode>} declarationNodeList
  */
 function handleDeclarationList(declarationNodeList) {
-    const modifiedList=new csstree.List();
+    const modifiedList=[];
     declarationNodeList.forEach(declaration=>{
         if(declaration.type==="Declaration"){
             modifiedList.push(...handleDeclaration(declaration)); 
@@ -233,19 +233,19 @@ function handleDeclaration(declaration){
         declaration.value=csstree.parse(declaration.value.value,{context:"value"});
     }
     if(declaration.value.type==="Value"){
-        const oldValue=csstree.generate(declaration.value.children);
+        const oldValue=csstree.generate(declaration.value);
         const {property}=declaration;
         const isCustomPropertyResult=isCustomProperty(property);
         const propTypeList=isCustomPropertyResult?["bg","border","text"]:[getCssPropType(property)];
         propTypeList.filter(propType=>propType!=="").forEach(propType=>{
-            const newValue=new csstree.List();
-            declaration.value.children.forEach(perValue=>{
-                newValue.push(handlePerValue(propType, perValue));
-            });
+            const newValue=csstree.clone(declaration.value);
+            if(newValue.type==="Value"&&declaration.value.type==="Value"){
+                newValue.children.fromArray(declaration.value.children.map(perValue=>handlePerValue(propType, perValue)) );
+            }
             
             if(csstree.generate(newValue)!==oldValue){
                 const newDeclaration=csstree.clone(declaration);
-                newDeclaration.value.children=newValue;
+                newDeclaration.value=newValue;
                 if(isCustomPropertyResult){
                     newDeclaration.property=addCssPrefix(propType,property);
                 }
@@ -454,16 +454,23 @@ function handleInlineStyle(element) {
     }
 
     const declarationListAst = parseInlineStyle(originalInlineStyle.get(element));
-    console.log(originalInlineStyle.get(element));
-    const modifiedRules = handleDeclarationList(declarationListAst.children);
-    console.log(csstree.generate(modifiedRules));
+    const modifiedDeclarations = handleDeclarationList(declarationListAst.children);
 
-    if (modifiedRules.length === 0) {
+    if (modifiedDeclarations.length === 0) {
         originalInlineStyle.delete(element);
         return;
     }
 
-    element.setAttribute("style", cssDeclarationToText([...declarationListAst, ...modifiedRules]));
+    const newDeclarationList=csstree.parse("",{context:"declarationList"});
+    if(newDeclarationList.type==="DeclarationList"){
+        newDeclarationList.children.fromArray(modifiedDeclarations);
+    }
+    if(modifiedDeclarations.length>0){
+        console.log(originalInlineStyle.get(element));
+        console.log(csstree.generate(newDeclarationList));
+    }
+
+    element.setAttribute("style", csstree.generate(newDeclarationList));
 }
 
 function getCssText(styleElement) {
