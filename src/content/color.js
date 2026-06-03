@@ -3,7 +3,7 @@ import { parse } from "culori";
 export function extractRGB(color) {
     const rgb=parse(color);
     if (rgb){
-        return [rgb.r,rgb.g,rgb.b,rgb.a];
+        return [rgb.r,rgb.g,rgb.b,rgb.alpha];
     }else{
         return undefined;
     }
@@ -12,7 +12,7 @@ export function extractRGB(color) {
 export function extractHSL(color) {
     const hsl=parse(color);
     if(hsl){
-        return [hsl.h,hsl.s,hsl.l,hsl.a];
+        return [hsl.h,hsl.s,hsl.l,hsl.alpha];
     }else{
         return undefined;
     }
@@ -63,7 +63,7 @@ export function rgbToHexText(r, g, b, a=1) {
 }
 
 export function rgbToText(r, g, b, a=1) {
-    return `rgb(${Math.round(r*255)} ${Math.round(g*255)} ${Math.round(b*255)} ${a!==1?`/ ${a}`:""})`;
+    return `rgb(${Math.round(r*255)} ${Math.round(g*255)} ${Math.round(b*255)}${a!==1?` / ${a}`:""})`;
 }
 /**
 * @param {number} r 0-1
