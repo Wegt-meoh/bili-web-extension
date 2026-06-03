@@ -238,7 +238,7 @@ function handleDeclaration(declaration){
         const isCustomPropertyResult=isCustomProperty(property);
         const propTypeList=isCustomPropertyResult?["bg","border","text"]:[getCssPropType(property)];
         propTypeList.filter(propType=>propType!=="").forEach(propType=>{
-            const newValue=csstree.clone(declaration.value);
+            const newValue=csstree.parse("",{context:"value"});
             if(newValue.type==="Value"&&declaration.value.type==="Value"){
                 newValue.children.fromArray(declaration.value.children.map(perValue=>handlePerValue(propType, perValue)) );
             }
@@ -279,7 +279,6 @@ function handlePerValue(propType,value){
                 const collection=[];
                 value.children.forEach(c=>{
                     collection.push(handlePerValue(propType,c));
-                    
                 });
                 newNode.children.fromArray(collection);
                 return newNode;
