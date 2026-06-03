@@ -301,7 +301,7 @@ function handleHash(propType,hash){
     const newHashValue=handleHexColor(propType,hash.value);
     if(newHashValue){
         const newHash=csstree.clone(hash);
-        newHash.value=newHashValue;
+        newHash.value=newHashValue.replace("#","");
         return newHash;
     }else{
         throw new Error("Can not handle hash value",hash.value);
