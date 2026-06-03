@@ -90,10 +90,6 @@ function isColorKeyword(color) {
     return COLOR_KEYWORDS.has(color.toLowerCase());
 }
 
-function isColorRelatedValue(value) {
-    return !isColorKeyword(value)&&/^(rgba?\(|hsla?\(|#|\d+,\d+,\d+)/i.test(value);
-}
-
 function getCssPropType(prop) {
     return /^background|^(?!--).*-shadow$/i.test(prop) ? "bg" : /^border|^outline|^column-rule|^stroke$/i.test(prop) ? "border" : /^(color|text-decoration-color|caret-color|fill)$/i.test(prop) ? "text" : "";
 }
@@ -233,6 +229,8 @@ function handleDeclaration(declaration){
         declaration.value=csstree.parse(declaration.value.value,{context:"value"});
     }
     if(declaration.value.type==="Value"){
+        const isColorRelatedResult=isColorRelatedValue(declaration.value.children);
+        if(!isColorRelatedResult) return modified;
         const oldValue=csstree.generate(declaration.value);
         const {property}=declaration;
         const isCustomPropertyResult=isCustomProperty(property);
@@ -243,12 +241,12 @@ function handleDeclaration(declaration){
                 newValue.children.fromArray(declaration.value.children.map(perValue=>handlePerValue(propType, perValue)) );
             }
             
-            if(csstree.generate(newValue)!==oldValue){
-                const newDeclaration=csstree.clone(declaration);
-                newDeclaration.value=newValue;
-                if(isCustomPropertyResult){
-                    newDeclaration.property=addCssPrefix(propType,property);
-                }
+            const newDeclaration=csstree.clone(declaration);
+            newDeclaration.value=newValue;
+            if(isCustomPropertyResult){
+                newDeclaration.property=addCssPrefix(propType,property);
+                modified.push(newDeclaration);
+            }else if(csstree.generate(newValue)!==oldValue){
                 modified.push(newDeclaration);
             }
         });
@@ -256,6 +254,37 @@ function handleDeclaration(declaration){
     return modified;
 }
 
+/**
+* @param {csstree.List<csstree.CssNode>} value 
+*/
+function isColorRelatedValue(value){
+    for (let c of value){
+        switch(c.type){
+            case "Hash":
+                return true;
+            case "Identifier":{
+                let isColorVar=customPropertyStore.get(c.name);
+                if(isColorVar===true){
+                    return true;
+                }
+                break;
+            }
+            case "Function":{
+                const {name: functionName}=c;
+                if(functionName.startsWith("rgb")||functionName.startsWith("hsl")){
+                    return true;
+                }else if(functionName==="var"){
+                    let flag = isColorRelatedValue(c.children);
+                    if(flag===true){
+                        return true;
+                    }
+                }
+                break;
+            }
+        }
+    }
+    return false;
+}
 
 /**
 * @param {string} propType 
