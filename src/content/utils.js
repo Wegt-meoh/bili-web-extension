@@ -11,7 +11,7 @@ export function parsePerValue(value){
  * @returns {csstree.CssNode}
  */
 export function parseInlineStyle(text) {
-    return csstree.parse(text, { context: "declarationList",parseCustomProperty: true });
+    return csstree.parse(text, { context: "declarationList"});
 }
 
 /**
@@ -20,8 +20,7 @@ export function parseInlineStyle(text) {
  * @returns {csstree.CssNode}
  */
 export function parseCssStyleSheet(text) {
-    const ast = csstree.parse(text,{parseCustomProperty: true});
-    return ast;
+    return csstree.parse(text);
 }
 
 export function getStyleSheetText(sheet) {
