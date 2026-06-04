@@ -3,7 +3,7 @@ import * as csstree from "css-tree";
 import { CLASS_PREFIX, COLOR_KEYWORDS, defaultDarkColor, IGNORE_SELECTOR, PSEUDO_ELEMENT, STYLE_SELECTOR } from "./const.js";
 import { injectUserAgentStyle } from "./fallback.js";
 import { loadText } from "./network.js";
-import { classNameToSelectorText, cssBlocksToText, cssDeclarationToText, getStyleSheetText, Logger, parseCssStyleSheet, parseInlineStyle, parsePerValue } from "./utils.js";
+import { classNameToSelectorText, getStyleSheetText, Logger, parseCssStyleSheet, parseInlineStyle, parsePerValue } from "./utils.js";
 import { CustomPropertyStorage } from "./cache.js";
 
 const customPropertyStore=new CustomPropertyStorage();
@@ -234,6 +234,9 @@ function handleDeclaration(declaration){
         const oldValue=csstree.generate(declaration.value);
         const {property}=declaration;
         const isCustomPropertyResult=isCustomProperty(property);
+        if(isCustomPropertyResult){
+            customPropertyStore.insert(property,true);
+        }
         const propTypeList=isCustomPropertyResult?["bg","border","text"]:[getCssPropType(property)];
         propTypeList.filter(propType=>propType!=="").forEach(propType=>{
             const newValue=csstree.parse("",{context:"value"});
@@ -263,9 +266,11 @@ function isColorRelatedValue(value){
             case "Hash":
                 return true;
             case "Identifier":{
-                let isColorVar=customPropertyStore.get(c.name);
-                if(isColorVar===true){
-                    return true;
+                if(isCustomProperty(c.name)){
+                    const isColorVar=customPropertyStore.get(c.name);
+                    if(isColorVar===true){
+                        return true;
+                    }
                 }
                 break;
             }
@@ -385,19 +390,52 @@ function handleColorFunction(propType,colorFunctionNode){
 }
 
 /**
-  * @param {csstree.CssNode} styleSheetAst 
-  * @param {Node} rootNode 
-  * @returns 
+  * @param {csstree.StyleSheet} styleSheetAst 
 */
-export function handleStyleSheet(styleSheetAst, rootNode) {
-    const modifiedCssRules = [];
-    const computedStyleMap = generateComputedMap(rootNode);
+export function handleStyleSheet(styleSheetAst) {
+    const newStyleSheetAst=csstree.parse(""); 
+    let modifiedRules=[];
 
-    csstree.walk(styleSheetAst,node=>{
-        // console.log("handleStyleSheet csstree walk",node);
+    styleSheetAst.children.forEach(c=>{
+        if(c.type==="Atrule"||c.type==="Rule"){
+            modifiedRules.push(handleRule(c));
+        }
     });
 
-    return modifiedCssRules;
+    newStyleSheetAst.children.fromArray(modifiedRules.filter(rule=>rule!==undefined&&rule!==null));
+
+    return newStyleSheetAst;
+}
+
+/**
+* @param {csstree.CssNode} rule 
+*/
+function handleRule(rule){
+    if(rule.type!=="Atrule"&&rule.type!=="Rule") return ;
+
+    if(rule.block){
+        const modified=[];
+        rule.block.children.forEach(c=>{
+            if(c.type==="Atrule"||c.type==="Rule"){
+                modified.push(handleRule(c));
+            }else if (c.type==="Declaration"){
+                modified.push(...handleDeclaration(c)); 
+            }
+        });
+
+        if(modified.length>0){
+            const newRule=csstree.clone(rule);
+            const newBlock=csstree.parse("{}",{context:"block"});
+            if(newBlock.type==="Block"){
+                newBlock.children.fromArray(modified.filter(m=>m!==undefined&&m!==null));
+            }
+            if(newRule.type==="Atrule"||newRule.type==="Rule"){
+                newRule.block=newBlock;
+            }
+            return newRule;
+        }
+    }
+    return null;
 }
 
 function getCssRules(style) {
@@ -493,10 +531,11 @@ function handleInlineStyle(element) {
     if(newDeclarationList.type==="DeclarationList"){
         newDeclarationList.children.fromArray(modifiedDeclarations);
     }
-    if(modifiedDeclarations.length>0){
-        console.log(originalInlineStyle.get(element));
-        console.log(csstree.generate(newDeclarationList));
-    }
+
+    //    if(modifiedDeclarations.length>0){
+    //        console.log(originalInlineStyle.get(element));
+    //        console.log(csstree.generate(newDeclarationList));
+    //    }
 
     element.setAttribute("style", csstree.generate(newDeclarationList));
 }
@@ -538,7 +577,7 @@ async function createOrUpdateStyleElement(cssElement) {
         cssText = getCssText(cssElement);
     }
     const styleSheetAst = parseCssStyleSheet(cssText);
-    const modifiedRules = handleStyleSheet(styleSheetAst, cssElement.getRootNode());
+    const modifiedStyleSheetAst = handleStyleSheet(styleSheetAst);
 
     const relatedStyleElement = relatedStyleMap.get(cssElement);
     if (relatedStyleElement && relatedStyleElement instanceof HTMLStyleElement) {
@@ -546,12 +585,10 @@ async function createOrUpdateStyleElement(cssElement) {
         relatedStyleElement.remove();
     }
 
-    if (modifiedRules.length === 0) return;
-
     const injectedStyleElem = document.createElement("style");
     injectedStyleElem.classList.add(CLASS_PREFIX);
     injectedStyleElem.media = "screen";
-    injectedStyleElem.textContent = cssBlocksToText(modifiedRules);
+    injectedStyleElem.textContent = csstree.generate(modifiedStyleSheetAst); 
     cssElement.insertAdjacentElement('afterend', injectedStyleElem);
     relatedStyleMap.set(cssElement, injectedStyleElem);
 }
@@ -562,12 +599,11 @@ function handleAdoptedStyle(docum) {
     }
 
     const styleSheetList = docum.adoptedStyleSheets.filter(s => s._tag !== CLASS_PREFIX);
-    const modifiedRulesList = styleSheetList
-        .map(sheet => handleStyleSheet(parseCssStyleSheet(getStyleSheetText(sheet)), docum))
-        .filter(i => i !== null);
-    const injectedCssStyleSheetList = modifiedRulesList.map(rules => {
+    const modifiedStyleSheetAstList = styleSheetList
+        .map(sheet => handleStyleSheet(parseCssStyleSheet(getStyleSheetText(sheet))));
+    const injectedCssStyleSheetList = modifiedStyleSheetAstList.map(modifiedStyleSheetAst => {
         const styleSheet = new CSSStyleSheet();
-        styleSheet.replaceSync(cssBlocksToText(rules));
+        styleSheet.replaceSync(csstree.generate(modifiedStyleSheetAst));
         styleSheet._tag = CLASS_PREFIX;
         return styleSheet;
     });
