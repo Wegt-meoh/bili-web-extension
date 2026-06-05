@@ -17,7 +17,7 @@
     ],
     "author": "wegt-meoh wegt-meoh@outlook.com",
     "license": "ISC",
-    "packageManager": "pnpm@10.15.0",
+    "packageManager": "pnpm@11.5.1",
     "devDependencies": {
         "@eslint/js": "^9.35.0",
         "eslint": "^9.35.0",
