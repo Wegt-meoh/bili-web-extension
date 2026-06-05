@@ -5,7 +5,8 @@
     "type": "module",
     "main": "index.js",
     "scripts": {
-        "build": "vite build",
+        "dev":"vite build --mode development",
+        "build": "vite build --mode production",
         "lint": "eslint",
         "fix": "eslint --fix",
         "test": "echo \"Error: no test specified\" && exit 1"

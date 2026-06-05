@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import webExtension from 'vite-plugin-web-extension';
 
-export default defineConfig({
+export default defineConfig(({mode})=>({
     plugins: [
         webExtension({
             manifest: 'manifest.json',
@@ -9,6 +9,8 @@ export default defineConfig({
         }),
     ],
     build: {
-        sourcemap: true,
+        emptyOutDir: true,
+        sourcemap: mode === 'development',
+        minify: mode === 'production'
     },
-});
+}));
