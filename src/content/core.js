@@ -33,7 +33,7 @@ function shouldManageStyle(element) {
                 !element.disabled &&
                 (navigator.userAgent.toLowerCase().includes("firefox") ?
                     !element.href.startsWith("moz-extension://") : true
-                ) &isFontsGoogleApiStyle(element)
+                ) &&!isFontsGoogleApiStyle(element)
             )
         ) &&
         element.media.toLowerCase() !== "print" &&
