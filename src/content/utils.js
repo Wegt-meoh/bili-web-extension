@@ -1,5 +1,38 @@
 import * as csstree from "css-tree";
 
+/**
+* @param {csstree.Value} value 
+*/
+export function extractCustomPropertyFromValue(value){
+    return csstree.findAll(value,(node)=>node.type==="Identifier"&&isCustomProperty(node.name)).map(item=>item.name);
+}
+
+/**
+* @param {csstree.List<csstree.CssNode>} value 
+* @param {CustomPropertyStorage|undefined} customPropertyStore 
+*/
+export function isColorRelatedValue(value, customPropertyStore){
+    const colorRelated=csstree.findAll(value,(node)=>{
+        if(node.type==="Hash"){
+            return true;
+        }else if(node.type==="Function"){
+            return node.name.startsWith("rgb")||node.name.startsWith("hsl");
+        }else if(customPropertyStore!==undefined&&node.type==="Identifier"&&isCustomProperty(node.name)){
+            const result=customPropertyStore.get(node.name);
+            if(result===true){
+                return true;
+            }else{
+                return false;
+            }
+        }
+    });
+    return colorRelated.length>0;
+}
+
+export function isCustomProperty(name){
+    return name.startsWith("--")?true:false;
+}
+
 export function parsePerValue(value){
     const newValue=csstree.parse(value,{context:"value"});
     return newValue.children.first;
@@ -11,7 +44,7 @@ export function parsePerValue(value){
  * @returns {csstree.CssNode}
  */
 export function parseInlineStyle(text) {
-    return csstree.parse(text, { context: "declarationList"});
+    return csstree.parse(text, { context: "declarationList",parseCustomProperty:true});
 }
 
 /**
@@ -20,7 +53,7 @@ export function parseInlineStyle(text) {
  * @returns {csstree.CssNode}
  */
 export function parseCssStyleSheet(text) {
-    return csstree.parse(text);
+    return csstree.parse(text,{parseCustomProperty:true});
 }
 
 export function getStyleSheetText(sheet) {

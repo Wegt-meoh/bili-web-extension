@@ -3,7 +3,7 @@ import * as csstree from "css-tree";
 import { CLASS_PREFIX, COLOR_KEYWORDS, defaultDarkColor, IGNORE_SELECTOR, PSEUDO_ELEMENT, STYLE_SELECTOR } from "./const.js";
 import { injectUserAgentStyle } from "./fallback.js";
 import { loadText } from "./network.js";
-import { classNameToSelectorText, getStyleSheetText, Logger, parseCssStyleSheet, parseInlineStyle, parsePerValue } from "./utils.js";
+import { classNameToSelectorText, getStyleSheetText, isColorRelatedValue, isCustomProperty, Logger, parseCssStyleSheet, parseInlineStyle, parsePerValue } from "./utils.js";
 import { CustomPropertyStorage } from "./cache.js";
 
 const customPropertyStore=new CustomPropertyStorage();
@@ -229,7 +229,7 @@ function handleDeclaration(declaration){
         declaration.value=csstree.parse(declaration.value.value,{context:"value"});
     }
     if(declaration.value.type==="Value"){
-        const isColorRelatedResult=isColorRelatedValue(declaration.value.children);
+        const isColorRelatedResult=isColorRelatedValue(declaration.value.children,customPropertyStore);
         if(!isColorRelatedResult) return modified;
         const oldValue=csstree.generate(declaration.value);
         const {property}=declaration;
@@ -255,40 +255,6 @@ function handleDeclaration(declaration){
         });
     }
     return modified;
-}
-
-/**
-* @param {csstree.List<csstree.CssNode>} value 
-*/
-function isColorRelatedValue(value){
-    for (let c of value){
-        switch(c.type){
-            case "Hash":
-                return true;
-            case "Identifier":{
-                if(isCustomProperty(c.name)){
-                    const isColorVar=customPropertyStore.get(c.name);
-                    if(isColorVar===true){
-                        return true;
-                    }
-                }
-                break;
-            }
-            case "Function":{
-                const {name: functionName}=c;
-                if(functionName.startsWith("rgb")||functionName.startsWith("hsl")){
-                    return true;
-                }else if(functionName==="var"){
-                    let flag = isColorRelatedValue(c.children);
-                    if(flag===true){
-                        return true;
-                    }
-                }
-                break;
-            }
-        }
-    }
-    return false;
 }
 
 /**
@@ -339,10 +305,6 @@ function handleHash(propType,hash){
     }else{
         throw new Error("Can not handle hash value",hash.value);
     }
-}
-
-function isCustomProperty(name){
-    return name.startsWith("--")?true:false;
 }
 
 /**
@@ -457,7 +419,7 @@ async function getHtmlLinkElementData(linkElement) {
 
     try {
         const data = await loadText(url, location.origin);
-        return data;
+        return data??"";
     } catch (err) {
         Logger.err("catch error when loadText", err);
         return "";
@@ -477,28 +439,51 @@ function getAllInlineStyleElements(element, result = []) {
     }
 
     element.querySelectorAll("[style]").forEach(e => result.push(e));
-    return result;
+    return result.filter(item=>item instanceof Element && !checkShouldIgnore(classNameToSelectorText(item.className)));
 }
+
 
 async function injectDynamicTheme(target) {
     if (!(target instanceof Node)) {
         return;
     }
 
+    // extract css
+    const inlineStyleElements = getAllInlineStyleElements(target).filter(item=>item instanceof Element);
+    const cssElements = getStyles(target);
+
+    // parse ast
+    const inlineStyleAst=inlineStyleElements.map(el=>{
+        let styleText;
+        if(originalInlineStyle.has(el)){
+            styleText=originalInlineStyle.get(el);
+        }else{
+            styleText=el.getAttribute("style");
+        }
+        return {element:el,ast:parseInlineStyle(styleText)};
+    });
+    const styleSheetAst=(await Promise.all(cssElements.map(el=>extractStyleSheetAst(el)))).map((ast,index)=>({element:cssElements[index],ast}));
+
+    // init custom property store before modify style
+    inlineStyleAst.forEach(({ast})=>{
+        customPropertyStore.loadFromInlineStyleAst(ast);
+    });
+    styleSheetAst.forEach(({ast})=>{
+        customPropertyStore.loadFromStyleSheetAst(ast);
+    });
+    console.log(customPropertyStore);
+    return;
+
     // handle inline style elements
-    const inlineStyleElements = getAllInlineStyleElements(target);
     inlineStyleElements.forEach(el => handleInlineStyle(el));
 
     // handle style element and css external link
-    let cssElements = getStyles(target);
-    for (let cssElement of cssElements) {
-        if (cssElement instanceof HTMLStyleElement) {
-            observeStyleElement(cssElement);
+    styleSheetAst.forEach(({element,ast})=>{
+        if(element instanceof HTMLStyleElement){
+            observeStyleElement(element);
         }
-
-        // ensure handle style data after observer setup
-        await createOrUpdateStyleElement(cssElement);
-    }
+        createOrUpdateStyleElement(element,ast);
+    });
 
     await injectInDeep(target);
 }
@@ -507,11 +492,6 @@ const originalInlineStyle = new Map();
 
 function handleInlineStyle(element) {
     if (!(element instanceof Element)) {
-        return;
-    }
-
-    // ignore the element which match the cssrule
-    if (checkShouldIgnore(classNameToSelectorText(element.className))) {
         return;
     }
 
@@ -560,7 +540,7 @@ function getCssText(styleElement) {
 
 const relatedStyleMap = new Map();
 
-async function createOrUpdateStyleElement(cssElement) {
+async function extractStyleSheetAst(cssElement){
     if (!(cssElement instanceof HTMLStyleElement) && !(cssElement instanceof HTMLLinkElement) && !(cssElement instanceof SVGStyleElement)) {
         Logger.err("cssElement must be HTMLStyleElement or HTMLLinkElment or SVGStyleElement but got", cssElement);
         return;
@@ -570,13 +550,22 @@ async function createOrUpdateStyleElement(cssElement) {
     if (cssElement instanceof HTMLLinkElement) {
         cssText = await getHtmlLinkElementData(cssElement);
         if(cssText===""){
-            setTimeout(()=>{createOrUpdateStyleElement(cssElement);},8000);
-            return ;
+            cssText=await new Promise(res=>{
+                setTimeout(()=>{res(getHtmlLinkElementData(cssElement));},8000);
+            });
         }
     } else {
         cssText = getCssText(cssElement);
     }
-    const styleSheetAst = parseCssStyleSheet(cssText);
+
+    return parseCssStyleSheet(cssText); 
+}
+
+/**
+* @param {Element} cssElement 
+* @param {csstree.StyleSheet} styleSheetAst 
+*/
+function createOrUpdateStyleElement(cssElement,styleSheetAst) {
     const modifiedStyleSheetAst = handleStyleSheet(styleSheetAst);
 
     const relatedStyleElement = relatedStyleMap.get(cssElement);
@@ -670,7 +659,7 @@ function observeStyleElement(styleElement) {
     observedStyleElement.add(styleElement);
 
     const observer = new MutationObserver(() => {
-        createOrUpdateStyleElement(styleElement);
+        injectDynamicTheme(styleElement);
     });
     observer.observe(styleElement, { childList: true, characterData: true, subtree: true });
     observers.push(observer);
