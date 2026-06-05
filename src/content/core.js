@@ -3,7 +3,7 @@ import * as csstree from "css-tree";
 import { CLASS_PREFIX, COLOR_KEYWORDS, defaultDarkColor, IGNORE_SELECTOR, PSEUDO_ELEMENT, STYLE_SELECTOR } from "./const.js";
 import { injectUserAgentStyle } from "./fallback.js";
 import { loadText } from "./network.js";
-import { classNameToSelectorText, getStyleSheetText, isColorRelatedValue, isCustomProperty, Logger, parseCssStyleSheet, parseInlineStyle, parsePerValue } from "./utils.js";
+import { classNameToSelectorText, getStyleSheetText, needsProcessingValue, isCustomProperty, Logger, parseCssStyleSheet, parseInlineStyle, parsePerValue } from "./utils.js";
 import { CustomPropertyStorage } from "./cache.js";
 
 const customPropertyStore=new CustomPropertyStorage();
@@ -229,7 +229,7 @@ function handleDeclaration(declaration){
         declaration.value=csstree.parse(declaration.value.value,{context:"value"});
     }
     if(declaration.value.type==="Value"){
-        const isColorRelatedResult=isColorRelatedValue(declaration.value.children,customPropertyStore);
+        const isColorRelatedResult=needsProcessingValue(declaration.value.children,customPropertyStore);
         if(!isColorRelatedResult) return modified;
         const oldValue=csstree.generate(declaration.value);
         const {property}=declaration;
@@ -471,8 +471,6 @@ async function injectDynamicTheme(target) {
     styleSheetAst.forEach(({ast})=>{
         customPropertyStore.loadFromStyleSheetAst(ast);
     });
-    console.log(customPropertyStore);
-    return;
 
     // handle inline style elements
     inlineStyleElements.forEach(el => handleInlineStyle(el));

@@ -1,6 +1,6 @@
 const SESSION_STORAGE_KEY_PREFIX_CSS_CACHE = "__dark_bili_css_cache";
 import * as csstree from "css-tree";
-import { extractCustomPropertyFromValue, isColorRelatedValue, isCustomProperty } from "./utils";
+import { extractCustomPropertyFromValue, needsProcessingValue, isCustomProperty } from "./utils";
 
 export function writeCssFetchCache(url, data) {
     try {
@@ -42,13 +42,13 @@ export class CustomPropertyStorage{
         csstree.walk(ast,(node)=>{
             if(node.type==="Declaration"&&isCustomProperty(node.property)){
                 const {property,value}=node;
-                console.log(property,node.value.type,csstree.generate(node.value));
                 const propertyList=extractCustomPropertyFromValue(value);
-                console.log(propertyList);
-                if(propertyList.length>0){
+                if(needsProcessingValue(value)){
+                    this.insert(property,true); 
+                }else if(propertyList.length>0){
                     this.insert(property,propertyList);
-                }{
-                    this.insert(property,isColorRelatedValue(value));
+                }else{
+                    this.insert(property,false);
                 }
                 return csstree.walk.skip;
             }

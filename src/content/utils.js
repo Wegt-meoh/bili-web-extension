@@ -11,8 +11,8 @@ export function extractCustomPropertyFromValue(value){
 * @param {csstree.List<csstree.CssNode>} value 
 * @param {CustomPropertyStorage|undefined} customPropertyStore 
 */
-export function isColorRelatedValue(value, customPropertyStore){
-    const colorRelated=csstree.findAll(value,(node)=>{
+export function needsProcessingValue(value, customPropertyStore){
+    const result=csstree.findAll(value,(node)=>{
         if(node.type==="Hash"){
             return true;
         }else if(node.type==="Function"){
@@ -26,7 +26,7 @@ export function isColorRelatedValue(value, customPropertyStore){
             }
         }
     });
-    return colorRelated.length>0;
+    return result.length>0;
 }
 
 export function isCustomProperty(name){
