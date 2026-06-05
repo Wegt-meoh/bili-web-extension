@@ -229,8 +229,8 @@ function handleDeclaration(declaration){
         declaration.value=csstree.parse(declaration.value.value,{context:"value"});
     }
     if(declaration.value.type==="Value"){
-        const isColorRelatedResult=needsProcessingValue(declaration.value.children,customPropertyStore);
-        if(!isColorRelatedResult) return modified;
+        const needsProcessingResult=needsProcessingValue(declaration.value,customPropertyStore);
+        if(!needsProcessingResult) return modified;
         const oldValue=csstree.generate(declaration.value);
         const {property}=declaration;
         const isCustomPropertyResult=isCustomProperty(property);
@@ -565,7 +565,6 @@ async function extractStyleSheetAst(cssElement){
 */
 function createOrUpdateStyleElement(cssElement,styleSheetAst) {
     const modifiedStyleSheetAst = handleStyleSheet(styleSheetAst);
-    console.log(csstree.generate(modifiedStyleSheetAst));
     const relatedStyleElement = relatedStyleMap.get(cssElement);
     if (relatedStyleElement && relatedStyleElement instanceof HTMLStyleElement) {
         relatedStyleMap.delete(cssElement);
