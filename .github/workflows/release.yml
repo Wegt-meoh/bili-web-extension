@@ -13,13 +13,13 @@ jobs:
       - name: Setup NodeJs
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Install pnpm
-        run: npm install -g pnpm@10
+        run: npm install -g pnpm@11
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build
         run: pnpm build
@@ -27,20 +27,13 @@ jobs:
       - name: Zip the binary
         shell: bash
         run: |
-          TAG_NAME=${GITHUB_REF#refs/tags/}
-          zip -r extension-${TAG_NAME}.zip dist/
-          echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_ENV
-
-      - name: Upload Binary as Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: extension
-          path: extension-${{ env.TAG_NAME }}.zip
+          zip -r "extension-${GITHUB_REF_NAME}.zip" dist/
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: extension-${{ env.TAG_NAME }}.zip
-          tag_name: ${{ env.TAG_NAME }}
+          files: extension-${{ env.GITHUB_REF_NAME }}.zip
+          tag_name: ${{ env.GITHUB_REF_NAME }}
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.BILI_WEB_EXTENSION }}
