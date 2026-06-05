@@ -105,6 +105,10 @@ function shouldInvertColor(propType, l) {
     return true;
 }
 
+/**
+* @param {string} propType 
+* @param {string} color 
+*/
 function handleRgbColor(propType, color) {
     const rgbColor=extractRGB(color);
     if(rgbColor){
@@ -135,6 +139,10 @@ function handleHexColor(propType, color) {
     }
 }
 
+/**
+* @param {string} propType 
+* @param {string} color 
+*/
 function handleHslColor(propType, color) {
     const hslColor=extractHSL(color);
     if(hslColor){
@@ -239,11 +247,7 @@ function handleDeclaration(declaration){
         }
         const propTypeList=isCustomPropertyResult?["bg","border","text"]:[getCssPropType(property)];
         propTypeList.filter(propType=>propType!=="").forEach(propType=>{
-            const newValue=csstree.parse("",{context:"value"});
-            if(newValue.type==="Value"&&declaration.value.type==="Value"){
-                newValue.children.fromArray(declaration.value.children.map(perValue=>handlePerValue(propType, perValue)) );
-            }
-            
+            const newValue=handleValue(propType,declaration.value);
             const newDeclaration=csstree.clone(declaration);
             newDeclaration.value=newValue;
             if(isCustomPropertyResult){
@@ -259,37 +263,54 @@ function handleDeclaration(declaration){
 
 /**
 * @param {string} propType 
- * @param {csstree.CssNode} value 
- */
-function handlePerValue(propType,value){
-    if(propType===""){
-        return value;
+* @param {csstree.Value} value 
+*/
+function handleValue(propType,value){
+    if(propType==="") return value;
+    const newValue=csstree.parse("",{context:"value"});
+    if(newValue.type==="Value"){
+        newValue.children.fromArray(value.children.map(c=>handlePerValue(propType,c)));
     }
-    switch(value.type){
+    return newValue;
+}
+
+/**
+* @param {string} propType 
+ * @param {csstree.CssNode} node 
+ */
+function handlePerValue(propType,node){
+    if(propType===""){
+        return node;
+    }
+    switch(node.type){
         case "Hash":{
-            return handleHash(propType,value);
+            return handleHash(propType,node);
         }
         case "Identifier":{
-            return handleIdentifier(propType,value);
+            return handleIdentifier(propType,node);
         }
         case "Function":{
-            const functionName=value.name;
+            const functionName=node.name;
             if(functionName==="var"){
-                const newNode=csstree.clone(value);
+                const newNode=csstree.clone(node);
                 const collection=[];
-                value.children.forEach(c=>{
+                node.children.forEach(c=>{
                     collection.push(handlePerValue(propType,c));
                 });
                 newNode.children.fromArray(collection);
                 return newNode;
             }else if (functionName.startsWith("rgb")){
-                return handleColorFunction(propType,value);
+                return handleColorFunction(propType,node);
             }else if(functionName.startsWith("hsl")){
-                return handleColorFunction(propType,value);
+                return handleColorFunction(propType,node);
             }
+            break;
+        }
+        case "Value":{
+            return handleValue(propType,node);
         }
     }
-    return value;
+    return node;
 }
 
 /**
