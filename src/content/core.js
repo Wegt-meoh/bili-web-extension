@@ -295,7 +295,11 @@ function handlePerValue(propType,node){
         }
         case "Function":{
             const functionName=node.name;
-            if(functionName==="var"){
+            if (functionName.startsWith("rgb")){
+                return handleColorFunction(propType,node);
+            }else if(functionName.startsWith("hsl")){
+                return handleColorFunction(propType,node);
+            }else{
                 const newNode=csstree.clone(node);
                 const collection=[];
                 node.children.forEach(c=>{
@@ -303,12 +307,7 @@ function handlePerValue(propType,node){
                 });
                 newNode.children.fromArray(collection);
                 return newNode;
-            }else if (functionName.startsWith("rgb")){
-                return handleColorFunction(propType,node);
-            }else if(functionName.startsWith("hsl")){
-                return handleColorFunction(propType,node);
             }
-            break;
         }
         case "Value":{
             return handleValue(propType,node);
