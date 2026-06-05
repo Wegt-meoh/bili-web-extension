@@ -376,7 +376,7 @@ function handleRule(rule){
     if(rule.type!=="Atrule"&&rule.type!=="Rule") return ;
 
     if(rule.block){
-        const modified=[];
+        let modified=[];
         rule.block.children.forEach(c=>{
             if(c.type==="Atrule"||c.type==="Rule"){
                 modified.push(handleRule(c));
@@ -384,12 +384,12 @@ function handleRule(rule){
                 modified.push(...handleDeclaration(c)); 
             }
         });
-
+        modified=modified.filter(m=>m!==undefined&&m!==null);
         if(modified.length>0){
             const newRule=csstree.clone(rule);
             const newBlock=csstree.parse("{}",{context:"block"});
             if(newBlock.type==="Block"){
-                newBlock.children.fromArray(modified.filter(m=>m!==undefined&&m!==null));
+                newBlock.children.fromArray(modified);
             }
             if(newRule.type==="Atrule"||newRule.type==="Rule"){
                 newRule.block=newBlock;
@@ -505,7 +505,7 @@ function handleInlineStyle(element) {
         return;
     }
 
-    const newDeclarationList=csstree.parse("",{context:"declarationList"});
+    const newDeclarationList=parseInlineStyle("");
     if(newDeclarationList.type==="DeclarationList"){
         newDeclarationList.children.fromArray(modifiedDeclarations);
     }
@@ -565,7 +565,7 @@ async function extractStyleSheetAst(cssElement){
 */
 function createOrUpdateStyleElement(cssElement,styleSheetAst) {
     const modifiedStyleSheetAst = handleStyleSheet(styleSheetAst);
-
+    console.log(csstree.generate(modifiedStyleSheetAst));
     const relatedStyleElement = relatedStyleMap.get(cssElement);
     if (relatedStyleElement && relatedStyleElement instanceof HTMLStyleElement) {
         relatedStyleMap.delete(cssElement);
