@@ -220,12 +220,16 @@ function generateComputedMap(root) {
  */
 function handleDeclarationList(declarationNodeList) {
     const modifiedList=[];
+    const newDeclarationList=parseInlineStyle("");
     declarationNodeList.forEach(declaration=>{
         if(declaration.type==="Declaration"){
             modifiedList.push(...handleDeclaration(declaration)); 
         }
     });
-    return modifiedList;
+    if(newDeclarationList.type==="DeclarationList"){
+        newDeclarationList.children.fromArray(modifiedList);
+    }
+    return newDeclarationList;
 }
 
 /**
@@ -519,16 +523,11 @@ function handleInlineStyle(element) {
     }
 
     const declarationListAst = parseInlineStyle(originalInlineStyle.get(element));
-    const modifiedDeclarations = handleDeclarationList(declarationListAst.children);
+    const newDeclarationList = handleDeclarationList(declarationListAst.children);
 
-    if (modifiedDeclarations.length === 0) {
+    if (newDeclarationList.type==="DeclarationList"&&newDeclarationList.children.size=== 0) {
         originalInlineStyle.delete(element);
         return;
-    }
-
-    const newDeclarationList=parseInlineStyle("");
-    if(newDeclarationList.type==="DeclarationList"){
-        newDeclarationList.children.fromArray(modifiedDeclarations);
     }
 
     //    if(modifiedDeclarations.length>0){
@@ -536,7 +535,7 @@ function handleInlineStyle(element) {
     //        console.log(csstree.generate(newDeclarationList));
     //    }
 
-    element.setAttribute("style", csstree.generate(newDeclarationList));
+    element.setAttribute("style", originalInlineStyle.get(element)+";"+csstree.generate(newDeclarationList));
 }
 
 function getCssText(styleElement) {
