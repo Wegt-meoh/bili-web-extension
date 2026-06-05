@@ -328,7 +328,7 @@ function handleHash(propType,hash){
         newHash.value=newHashValue.replace("#","");
         return newHash;
     }else{
-        throw new Error("Can not handle hash value",hash.value);
+        Logger.err("Can not handle hash value",hash.value);
     }
 }
 
@@ -370,7 +370,7 @@ function handleColorFunction(propType,colorFunctionNode){
         if(newColorFunction){
             return newColorFunction;
         }else{
-            throw new Error("Can not parse rgb function",newColorText);
+            Logger.err("Can not parse rgb function",newColorText);
         }
     }
     return colorFunctionNode; 
