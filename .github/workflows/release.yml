@@ -36,4 +36,4 @@ jobs:
           tag_name: ${{ env.GITHUB_REF_NAME }}
           generate_release_notes: true
         env:
-          GITHUB_TOKEN: ${{ secrets.BILI_WEB_EXTENSION }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN}}
