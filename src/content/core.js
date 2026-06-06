@@ -630,7 +630,7 @@ export async function setupDynamicDarkTheme(docum) {
         observe(docum.documentElement);
         await injectDynamicTheme(docum.documentElement);
     } catch (err) {
-        Logger.log(err);
+        Logger.log("setup dynamic dark theme catch error",err);
     }
 }
 
@@ -650,7 +650,7 @@ async function setupDynamicDarkThemeForShadowRoot(shadowRoot) {
         observe(shadowRoot);
         await injectDynamicTheme(shadowRoot);
     } catch (err) {
-        Logger.log(err);
+        Logger.log("setup dynamic dark theme for shadow root catch err",err);
     }
 }
 
