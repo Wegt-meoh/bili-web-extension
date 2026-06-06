@@ -237,9 +237,6 @@ function handleDeclarationList(declarationNodeList) {
  */
 function handleDeclaration(declaration){
     const modified=[];
-    if(declaration.value.type==="Raw"){
-        declaration.value=csstree.parse(declaration.value.value,{context:"value"});
-    }
     if(declaration.value.type==="Value"){
         const needsProcessingResult=needsProcessingValue(declaration.value,customPropertyStore);
         if(!needsProcessingResult) return modified;
